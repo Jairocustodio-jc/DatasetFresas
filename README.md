@@ -17,6 +17,19 @@ Después activa GitHub Pages (Settings → Pages → la rama donde subiste el lo
 
 Antes de cada lote nuevo corre `git pull`. Para los siguientes lotes usa `--solo 2`, `--solo 3`, …, y repite el `git add`, `commit` y `push`.
 
+## Corregir cajas desde el celular
+
+1. Abre una foto y toca ✏️ para entrar en modo edición.
+2. Toca una caja para seleccionarla: aparecen 4 círculos en sus esquinas. Arrastra una esquina para cambiar el tamaño o arrastra el centro para mover la caja.
+3. Los botones de colores cambian el estado de la caja seleccionada. «＋ caja» agrega una caja nueva, «🗑 borrar» elimina la seleccionada y «↺ original» deshace todos los cambios de esa foto.
+4. El botón 1×/2×/3× hace zoom. Con zoom, arrastrar sobre una zona vacía mueve la imagen.
+5. Al terminar el lote, pulsa **Correcciones** en la parte superior. Se descarga o comparte `correcciones_lote_XX.json`; pásalo a la PC por WhatsApp, correo o Drive.
+6. En la PC:
+   ```powershell
+   python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar correcciones_lote_01.json
+   ```
+   El script escribe las cajas nuevas en los `.json` (LabelMe) o `.txt` (YOLO) originales y guarda una copia `.bak` del archivo anterior.
+
 Si cambia el script, `python revisar_fresas.py --rehacer-html` actualiza la página de los lotes ya generados sin volver a procesar las fotos.
 
 `revisar_fresas.py` identifica la carpeta del dataset que se arregló y la divide en lotes de 300 imágenes. Cada lote trae una página web para marcar cada foto como ✅ bien o ❌ mal desde el celular.
