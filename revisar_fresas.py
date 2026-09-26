@@ -195,12 +195,21 @@ def rehacer_html(salida):
     """Regenera los index.html de los lotes existentes con la plantilla actual."""
     dirs = sorted(d for d in salida.glob("lote_*") if (d / "index.html").exists())
     nombres = [d.name for d in dirs]
+    cantidades = []
     for i, d in enumerate(dirs):
         texto = (d / "index.html").read_text(encoding="utf-8")
         inicio = texto.index("const DATOS=") + len("const DATOS=")
         datos = json.loads(texto[inicio:texto.index(";\n", inicio)])
         escribir_html(d, nombres, i, datos)
-        print(f"  {d.name}: página actualizada")
+        cantidades.append(len(datos))
+    enlaces = "".join(f'<li><a href="{n}/index.html">{n}</a> — {c} fotos</li>'
+                      for n, c in zip(nombres, cantidades))
+    (salida / "index.html").write_text(
+        '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<title>Revisión fresas</title><body style="font-family:system-ui;font-size:20px;background:#111;color:#eee">'
+        f'<h2>Revisión de fresas</h2><ul style="line-height:2">{enlaces}</ul>'
+        '<style>a{color:#6cf}</style>', encoding="utf-8")
+    print(f"Páginas actualizadas: {', '.join(nombres)}")
 
 
 def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None):
@@ -226,14 +235,7 @@ def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None):
                           "img": f"img/{archivo}", "figs": leer_anotacion(img)})
         escribir_html(dir_lote, nombres, i, datos)
         print(f"  {nombre}: {len(grupo)} imágenes")
-    enlaces = "".join(f'<li><a href="{n}/index.html">{n}</a> — {len(g)} fotos</li>'
-                      for n, g in zip(nombres, lotes))
-    (salida / "index.html").write_text(
-        '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>Revisión fresas</title><body style="font-family:system-ui;font-size:20px;background:#111;color:#eee">'
-        f'<h2>Revisión de fresas</h2><p>Origen: {html.escape(str(origen))}</p>'
-        f'<ul style="line-height:2">{enlaces}</ul>'
-        '<style>a{color:#6cf}</style>', encoding="utf-8")
+    rehacer_html(salida)  # índice y flechas ◀ ▶ solo con los lotes que existen
     print(f"\nListo. Abre {salida / 'index.html'}")
 
 
