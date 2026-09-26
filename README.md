@@ -15,7 +15,9 @@ git push
 Después activa GitHub Pages (Settings → Pages → la rama donde subiste el lote, carpeta `/root`) y abre desde el celular:
 `https://jairocustodio-jc.github.io/DatasetFresas/revision/lote_01/index.html`
 
-Para los siguientes lotes usa `--solo 2`, `--solo 3`, …, y repite el `git add`, `commit` y `push`.
+Antes de cada lote nuevo corre `git pull`. Para los siguientes lotes usa `--solo 2`, `--solo 3`, …, y repite el `git add`, `commit` y `push`.
+
+Si cambia el script, `python revisar_fresas.py --rehacer-html` actualiza la página de los lotes ya generados sin volver a procesar las fotos.
 
 `revisar_fresas.py` identifica la carpeta del dataset que se arregló y la divide en lotes de 300 imágenes. Cada lote trae una página web para marcar cada foto como ✅ bien o ❌ mal desde el celular.
 

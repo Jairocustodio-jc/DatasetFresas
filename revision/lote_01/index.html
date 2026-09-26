@@ -6,6 +6,7 @@
 body{margin:0;font-family:system-ui,sans-serif;background:#111;color:#eee}
 header{position:sticky;top:0;background:#222;padding:10px 12px;z-index:2;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 header b{flex:1}
+header button{padding:6px 10px}
 button,a.btn{background:#444;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:15px;text-decoration:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;padding:6px}
 .c{position:relative;border:4px solid #333;border-radius:8px;overflow:hidden;background:#000}
@@ -16,18 +17,22 @@ button,a.btn{background:#444;color:#fff;border:0;border-radius:8px;padding:8px 1
 .c .m{position:absolute;right:4px;top:4px;font-size:22px}
 #ver{position:fixed;inset:0;background:#000;display:none;z-index:5;flex-direction:column}
 #ver .img{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-#ver .img div{position:relative;max-width:100%;max-height:100%}
+#ver .img>div{position:relative;max-width:100%;max-height:100%}
 #ver img{max-width:100vw;max-height:calc(100vh - 70px);display:block}
-#ver svg{position:absolute;inset:0;width:100%;height:100%}
+#ver svg,#ve{position:absolute;inset:0;width:100%;height:100%}
+.e{position:absolute;transform:translateY(-100%);color:#000;font-size:12px;font-weight:600;padding:0 3px;border-radius:3px;min-width:6px;min-height:6px;white-space:nowrap;pointer-events:none}
+.c .e{transform:none;border-radius:50%}
+#ley{width:100%;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px}
+#ley i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 #ver .bar{display:flex;gap:6px;padding:8px}
 #ver .bar button{flex:1;font-size:20px;padding:12px 0}
 </style></head><body>
 <header><b>lote_01 (300 fotos) · <span id="cont"></span></b>
 <button onclick="mostrarAnot=!mostrarAnot;pintar()">Anotaciones</button>
 <button onclick="descargar()">Descargar CSV</button>
-<a class="btn" href="../index.html">Lotes</a> <a class="btn" href="../lote_02/index.html">▶</a></header>
+<a class="btn" href="../index.html">Lotes</a><div id="ley"></div></header>
 <div class="grid" id="g"></div>
-<div id="ver"><div class="img"><div><img id="vi"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg></div></div>
+<div id="ver"><div class="img"><div><img id="vi"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg><div id="ve"></div></div></div>
 <div class="bar"><button onclick="mover(-1)">◀</button><button style="background:#27ae60" onclick="marcar('ok')">✅</button>
 <button style="background:#c0392b" onclick="marcar('mal')">❌</button><button onclick="cerrar()">✕</button><button onclick="mover(1)">▶</button></div></div>
 <script>
@@ -37,16 +42,28 @@ const CLAVE="fresas_"+LOTE;
 let marcas={},mostrarAnot=true,actual=-1;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}")}catch(e){}
 function guardar(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas))}catch(e){}}
+const COLORES={"unripe":"#2ecc71","early-pink":"#ff9ff3","commercial-basic":"#f39c12","commercial-high":"#e74c3c","overripe":"#9b59b6"};
+const EXTRA=["#00d2d3","#feca57","#54a0ff","#ffffff"];
+function color(l){if(!(l in COLORES))COLORES[l]=EXTRA[Object.keys(COLORES).length%EXTRA.length];return COLORES[l];}
 function svgDe(figs){
   if(!mostrarAnot)return"";
-  return figs.map(f=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="rgba(255,255,0,.12)" stroke="yellow" stroke-width=".004"/>`).join("");
+  return figs.map(f=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="${color(f.label)}" stroke-width=".006"/>`).join("");
+}
+function etqDe(figs,chico){
+  if(!mostrarAnot)return"";
+  return figs.map(f=>{const x=Math.min(...f.pts.map(p=>p[0])),y=Math.min(...f.pts.map(p=>p[1]));
+    return `<span class="e" style="left:${x*100}%;top:${y*100}%;background:${color(f.label)}">${chico?"":f.label}</span>`}).join("");
+}
+function leyenda(){
+  const n={};DATOS.forEach(d=>d.figs.forEach(f=>n[f.label]=(n[f.label]||0)+1));
+  document.getElementById("ley").innerHTML=Object.keys(n).sort().map(l=>`<span><i style="background:${color(l)}"></i>${l} (${n[l]})</span>`).join("");
 }
 function pintar(){
   const g=document.getElementById("g");g.innerHTML="";
   DATOS.forEach((d,i)=>{
     const m=marcas[d.orig]||"";
     const c=document.createElement("div");c.className="c "+m;
-    c.innerHTML=`<img loading="lazy" src="${d.img}"><svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(d.figs)}</svg>
+    c.innerHTML=`<img loading="lazy" src="${d.img}"><svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(d.figs)}</svg>${etqDe(d.figs,true)}
       <span class="m">${m=="ok"?"✅":m=="mal"?"❌":""}</span><span class="n">${i+1}. ${d.orig}</span>`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
@@ -54,7 +71,7 @@ function pintar(){
   document.getElementById("cont").textContent=`✅ ${ok} · ❌ ${mal} · pendientes ${DATOS.length-ok-mal}`;
 }
 function abrir(i){actual=i;const d=DATOS[i];document.getElementById("vi").src=d.img;
-  document.getElementById("vs").innerHTML=svgDe(d.figs);document.getElementById("ver").style.display="flex";}
+  document.getElementById("vs").innerHTML=svgDe(d.figs);document.getElementById("ve").innerHTML=etqDe(d.figs,false);document.getElementById("ver").style.display="flex";}
 function cerrar(){document.getElementById("ver").style.display="none";pintar();}
 function mover(k){const n=actual+k;if(n>=0&&n<DATOS.length)abrir(n);else cerrar();}
 function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o])delete marcas[o];guardar();mover(1);}
@@ -63,5 +80,5 @@ function descargar(){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([filas.join("\n")],{type:"text/csv"}));
   a.download=`resultado_${LOTE}.csv`;a.click();
 }
-pintar();
+leyenda();pintar();
 </script></body></html>
