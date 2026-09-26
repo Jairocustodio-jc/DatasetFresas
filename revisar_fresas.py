@@ -97,7 +97,7 @@ PLANTILLA = r"""<!doctype html>
 <meta name="theme-color" content="#0e0e10">
 <title>Fresas · __TITULO__</title>
 <style>
-:root{--bg:#0e0e10;--sup:#1a1a1d;--lin:#2a2a2e;--tx:#ececec;--mu:#8a8a90;--ok:#34c759;--mal:#ff453a;--ac:#ffd60a}
+:root{--bg:#0e0e10;--sup:#1a1a1d;--lin:#2a2a2e;--tx:#ececec;--mu:#8a8a90;--ok:#34c759;--mal:#ff453a;--ev:#ffd60a;--ac:#ffd60a}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font:15px/1.4 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
@@ -110,13 +110,13 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .ic:active{background:var(--sup)}
 .prog{height:3px;background:var(--lin);border-radius:2px;margin-top:10px;display:flex;overflow:hidden}
 .prog i{display:block;height:100%}
-#pok{background:var(--ok)}#pmal{background:var(--mal)}
+#pok{background:var(--ok)}#pev{background:var(--ev)}#pmal{background:var(--mal)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:3px;padding:0 3px 90px}
 .c{position:relative;aspect-ratio:4/3;background:var(--sup);overflow:hidden}
 .c img{width:100%;height:100%;object-fit:cover;display:block}
 .c svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .c .d{display:none;position:absolute;right:6px;top:6px;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px #0008}
-.c.ok .d,.c.mal .d{display:block}.c.ok .d{background:var(--ok)}.c.mal .d{background:var(--mal)}
+.c.ok .d,.c.mal .d,.c.ev .d{display:block}.c.ok .d{background:var(--ok)}.c.mal .d{background:var(--mal)}.c.ev .d{background:var(--ev)}
 .c .p{position:absolute;left:5px;top:3px;font-size:12px;text-shadow:0 0 3px #000}
 .fab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--tx);color:#000;font-weight:600;padding:12px 26px;border-radius:24px;box-shadow:0 4px 16px #0008}
 #hoja{position:fixed;inset:0;z-index:8;background:#0009;display:none;align-items:flex-end}
@@ -154,20 +154,23 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .chip i{width:9px;height:9px;border-radius:50%}
 .chip.act{color:var(--tx);box-shadow:inset 0 0 0 1.5px var(--tx)}
 .vbar{display:flex;gap:8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
-.vbar .nav{width:48px;font-size:26px;color:var(--mu)}
+.vbar .nav{width:36px;font-size:26px;color:var(--mu)}
 .vbar .b{flex:1;padding:13px 0;border-radius:12px;font-weight:600;border:1.5px solid}
 .b.mal{border-color:var(--mal);color:var(--mal)}.b.ok{border-color:var(--ok);color:var(--ok)}
 .b.mal.on{background:var(--mal);color:#000}.b.ok.on{background:var(--ok);color:#000}
+.b.ev{border-color:var(--ev);color:var(--ev)}.b.ev.on{background:var(--ev);color:#000}
+.vacio{grid-column:1/-1;text-align:center;color:var(--mu);padding:60px 20px}
 </style></head><body>
 <header>
  <div class="top"><a class="ic" href="../index.html">‹</a><div class="t">__TITULO__</div><span id="cont" class="mu"></span><button class="ic" onclick="hoja(true)">⋯</button></div>
- <div class="prog"><i id="pok"></i><i id="pmal"></i></div>
+ <div class="prog"><i id="pok"></i><i id="pev"></i><i id="pmal"></i></div>
 </header>
 <main class="grid" id="g"></main>
 <button class="fab" id="fab" onclick="seguir()">Revisar</button>
 <div id="hoja" onclick="if(event.target==this)hoja(false)"><div class="panel">
  <div id="ley"></div><div class="sep"></div>
  <button class="fila" onclick="mini=!mini;guardarPref();pintar();hoja(true)"><span>Cajas en miniaturas</span><span id="swmini" class="sw"></span></button>
+ <button class="fila" onclick="cambiarFiltro()"><span>Mostrar</span><span class="mu" id="lfiltro"></span></button>
  <button class="fila" onclick="descargar()"><span>Descargar resultados</span><span class="mu">CSV</span></button>
  <button class="fila" onclick="exportar()"><span>Exportar correcciones</span><span class="mu" id="ned"></span></button>
  <div class="sep"></div>__NAVEGACION__
@@ -178,14 +181,14 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <div class="img"><div id="lienzo"><img id="vi" draggable="false"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg></div><div id="ve"></div></div>
  <div id="edbar"><div class="chips" id="chips"></div>
   <button class="ic" title="Nueva caja" onclick="nuevaCaja()">＋</button><button class="ic" title="Borrar caja" onclick="borrarCaja()">⌫</button><button class="ic" title="Volver al original" onclick="restaurar()">↺</button></div>
- <div class="vbar"><button class="nav" onclick="mover(-1)">‹</button><button class="b mal" id="bmal" onclick="marcar('mal')">Mal</button>
+ <div class="vbar"><button class="nav" onclick="mover(-1)">‹</button><button class="b mal" id="bmal" onclick="marcar('mal')">Mal</button><button class="b ev" id="bev" onclick="marcar('ev')">Evaluar</button>
   <button class="b ok" id="bok" onclick="marcar('ok')">Bien</button><button class="nav" onclick="mover(1)">›</button></div>
 </div>
 <script>
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
+let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 function guardar(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones))}catch(e){}}
 function guardarPref(){try{localStorage.setItem("fresas_mini",mini?"1":"0")}catch(e){}}
@@ -213,26 +216,32 @@ function pintarCapa(){if(actual<0)return;$("ve").innerHTML=mostrarAnot||editando
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
-function hoja(on){$("hoja").classList.toggle("on",on);$("swmini").classList.toggle("on",mini);
+const FILTROS={todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
+function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="pend"?!m:m==filtro);}
+function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
+function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
   $("ned").textContent=Object.keys(ediciones).length+" fotos";
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
   $("ley").innerHTML=Object.keys(n).sort().map(l=>`<span><i style="background:${color(l)}"></i>${l} ${n[l]}</span>`).join("");}
 function pintar(){
-  const g=$("g");g.innerHTML="";
+  const g=$("g");g.innerHTML="";orden=[];
   DATOS.forEach((d,i)=>{
+    if(!pasaFiltro(d))return;orden.push(i);
     const c=document.createElement("div");c.className="c "+(marcas[d.orig]||"");
     c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':""}`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
-  const v=Object.values(marcas),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,t=DATOS.length;
-  $("cont").textContent=`${ok+mal}/${t}`;$("pok").style.width=ok/t*100+"%";$("pmal").style.width=mal/t*100+"%";
-  $("fab").textContent=ok+mal==0?"Empezar":ok+mal>=t?"Listo ✓":"Continuar";
+  if(!orden.length)g.innerHTML=`<div class="vacio">No hay fotos en «${FILTROS[filtro]}»</div>`;
+  const v=Object.values(marcas),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length,t=DATOS.length,hechas=ok+mal+ev;
+  $("cont").textContent=(filtro=="todas"?"":FILTROS[filtro]+" · ")+`${hechas}/${t}`;
+  $("pok").style.width=ok/t*100+"%";$("pev").style.width=ev/t*100+"%";$("pmal").style.width=mal/t*100+"%";
+  $("fab").textContent=filtro!="todas"?"Revisar "+orden.length:hechas==0?"Empezar":hechas>=t?"Listo ✓":"Continuar";
 }
-function seguir(){const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
+function seguir(){if(!orden.length)return;if(filtro!="todas"){abrir(orden[0]);return;}const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
 function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
   $("vs").innerHTML=mostrarAnot||editando?svgDe(f,editando):"";pintarCapa();
-  $("vpos").textContent=`${actual+1} / ${DATOS.length}`;
-  $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");
+  $("vpos").textContent=`${orden.indexOf(actual)+1} / ${orden.length}`;
+  $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");$("bev").classList.toggle("on",m=="ev");
   if(editando)pintarChips();}
 function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
@@ -240,7 +249,7 @@ function pintarChips(){
 }
 function abrir(i){actual=i;sel=-1;$("vi").onload=()=>aplicarVista(false);$("vi").src=DATOS[i].img;$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
 function cerrar(){if(editando)alternarEdicion();$("ver").style.display="none";pintar();}
-function mover(k){const n=actual+k;if(n>=0&&n<DATOS.length)abrir(n);else cerrar();}
+function mover(k){const n=orden[orden.indexOf(actual)+k];if(n!==undefined)abrir(n);else cerrar();}
 function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar();pintarVisor();return;}guardar();
   pintarVisor();setTimeout(()=>mover(1),150);}
 function alternarEdicion(){editando=!editando;sel=-1;
@@ -342,7 +351,7 @@ function bajar(nombre,contenido,tipo){
   const a=document.createElement("a");a.href=URL.createObjectURL(archivo);a.download=nombre;a.click();
 }
 function descargar(){
-  const filas=["archivo,estado,editada"].concat(DATOS.map(d=>`"${d.orig}",${marcas[d.orig]||"sin_revisar"},${d.orig in ediciones?"si":"no"}`));
+  const filas=["archivo,estado,editada"].concat(DATOS.map(d=>`"${d.orig}",${{ok:"bien",mal:"mal",ev:"evaluar"}[marcas[d.orig]]||"sin_revisar"},${d.orig in ediciones?"si":"no"}`));
   bajar(`resultado_${LOTE}.csv`,filas.join("\n"),"text/csv");
 }
 function exportar(){
@@ -385,8 +394,8 @@ a b{font-weight:500;width:64px}
 <script>
 const LOTES=__LOTES__;
 document.getElementById("l").innerHTML=LOTES.map(([n,t])=>{let m={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}")}catch(e){}
-  const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length;
-  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal==t?"✓":ok+mal+"/"+t}</span></a>`}).join("");
+  const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length;
+  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}</span></a>`}).join("");
 </script></body></html>
 """
 

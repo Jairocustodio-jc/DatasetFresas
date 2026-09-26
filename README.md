@@ -53,11 +53,12 @@ El script crea `revision\` con `lote_01` … `lote_10` (300 fotos cada uno, redu
 
 ## 3. Revisar desde el celular
 
-- Pulsa **Empezar** (o **Continuar**) para abrir la primera foto sin revisar. Marca **Bien** o **Mal** y pasa sola a la siguiente; ‹ › avanzan sin marcar.
+- Pulsa **Empezar** (o **Continuar**) para abrir la primera foto sin revisar. Marca **Bien**, **Mal** o **Evaluar** (dudosa, para verla después) y pasa sola a la siguiente; ‹ › avanzan sin marcar.
+- En el menú **⋯**, **Mostrar** filtra la cuadrícula: Todas, A evaluar, Mal, Bien o Sin revisar. Con un filtro activo, ‹ › y «Revisar» recorren solo esas fotos.
 - Toca la foto para ocultar o mostrar las cajas.
 - **Zoom:** pellizca con dos dedos o haz doble toque donde quieras acercar (otro doble toque vuelve al tamaño normal). Con zoom, un dedo mueve la foto. Sin zoom, deslizar a la izquierda o a la derecha pasa a la foto siguiente o anterior. El botón «1×» de arriba también acerca o restablece.
-- En la cuadrícula, el punto verde o rojo indica el estado y ✎ indica que la foto tiene cajas editadas.
-- El menú **⋯** tiene la leyenda de estados, la descarga del CSV (`resultado_lote_XX.csv`), la exportación de correcciones y la navegación entre lotes.
+- En la cuadrícula, el punto verde, amarillo o rojo indica el estado y ✎ indica que la foto tiene cajas editadas.
+- El menú **⋯** tiene la leyenda de estados, la descarga del CSV (`resultado_lote_XX.csv`, con estado `bien`, `mal`, `evaluar` o `sin_revisar`), la exportación de correcciones y la navegación entre lotes.
 - Las marcas se guardan en el navegador del celular.
 
 Para abrirlo en el celular, copia la carpeta `revision` a este repositorio (o a Google Drive o a la memoria del teléfono) y abre `index.html`. Con GitHub Pages activado queda un enlace que funciona desde cualquier lugar.
