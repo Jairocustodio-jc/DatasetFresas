@@ -23,10 +23,10 @@ Antes de cada lote nuevo corre `git pull`. Para los siguientes lotes usa `--solo
 2. Toca una caja para seleccionarla: aparecen 4 círculos en sus esquinas. Arrastra una esquina para cambiar el tamaño o arrastra el centro para mover la caja.
 3. Los estados de abajo cambian la etiqueta de la caja seleccionada. ＋ agrega una caja, ⌫ borra la seleccionada y ↺ vuelve a las cajas originales de esa foto.
 4. El zoom funciona igual que al revisar. Con zoom, arrastrar sobre una zona sin caja mueve la foto; pellizcar con dos dedos siempre hace zoom.
-5. Al terminar el lote, abre el menú **⋯** y pulsa **Exportar correcciones**. Se descarga o comparte `correcciones_lote_XX.json`; pásalo a la PC por WhatsApp, correo o Drive.
+5. Pulsa **Enviar** (arriba del lote). Se descarga o comparte `revision_lote_XX.json`, con marcas y cajas; pásalo a la PC por WhatsApp, correo o Drive.
 6. En la PC:
    ```powershell
-   python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar correcciones_lote_01.json
+   python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar revision_lote_01.json
    ```
    El script escribe las cajas nuevas en los `.json` (LabelMe) o `.txt` (YOLO) originales y guarda una copia `.bak` del archivo anterior.
 
@@ -59,6 +59,11 @@ El script crea `revision\` con `lote_01` … `lote_10` (300 fotos cada uno, redu
 - **Zoom:** pellizca con dos dedos o haz doble toque donde quieras acercar (otro doble toque vuelve al tamaño normal). Con zoom, un dedo mueve la foto. Sin zoom, deslizar a la izquierda o a la derecha pasa a la foto siguiente o anterior. El botón «1×» de arriba también acerca o restablece.
 - En la cuadrícula, el punto verde, amarillo o rojo indica el estado y ✎ indica que la foto tiene cajas editadas.
 - El menú **⋯** tiene la leyenda de estados, la descarga del CSV (`resultado_lote_XX.csv`, con estado `bien`, `mal`, `evaluar` o `sin_revisar`), la exportación de correcciones y la navegación entre lotes.
-- Las marcas se guardan en el navegador del celular.
+- **Guardado:** cada marca y cada caja editada se guarda al instante en el navegador del celular. Un aviso «✓ Guardado» lo confirma, y arriba del lote se ve cuántas fotos llevas y cuántas faltan enviar. Nada llega a la PC hasta que pulsas **Enviar**.
+- **Enviar:** genera un solo archivo `revision_lote_XX.json` con las marcas y las cajas corregidas, que puedes compartir por WhatsApp, correo o Drive. En la PC:
+  ```powershell
+  python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar revision_lote_01.json
+  ```
+  Esto crea `resultado_lote_01.csv` con las marcas y escribe las cajas corregidas en las anotaciones (con respaldo `.bak`).
 
 Para abrirlo en el celular, copia la carpeta `revision` a este repositorio (o a Google Drive o a la memoria del teléfono) y abre `index.html`. Con GitHub Pages activado queda un enlace que funciona desde cualquier lugar.

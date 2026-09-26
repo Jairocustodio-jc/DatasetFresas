@@ -159,24 +159,36 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .b.mal{border-color:var(--mal);color:var(--mal)}.b.ok{border-color:var(--ok);color:var(--ok)}
 .b.mal.on{background:var(--mal);color:#000}.b.ok.on{background:var(--ok);color:#000}
 .b.ev{border-color:var(--ev);color:var(--ev)}.b.ev.on{background:var(--ev);color:#000}
+.estado{display:flex;align-items:center;gap:8px;margin-top:10px;min-height:30px;font-size:13px;color:var(--mu)}
+.estado .txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estado b{font-weight:500;color:var(--tx)}
+.estado .pend{color:var(--ev)}
+.enviar{flex:none;padding:6px 14px;border-radius:14px;background:var(--sup);color:var(--tx);font-size:13px;font-weight:600}
+.enviar.urg{background:var(--ev);color:#000}
+#toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-8px);background:#fff;color:#000;font-size:13px;font-weight:600;padding:6px 14px;border-radius:14px;opacity:0;transition:.2s;z-index:9;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}#toast.err{background:var(--mal)}
+.chipest{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--sup);color:var(--mu);white-space:nowrap}
+.chipest.ok{background:var(--ok);color:#000}.chipest.mal{background:var(--mal);color:#000}.chipest.ev{background:var(--ev);color:#000}
 .vacio{grid-column:1/-1;text-align:center;color:var(--mu);padding:60px 20px}
 </style></head><body>
 <header>
  <div class="top"><a class="ic" href="../index.html">‹</a><div class="t">__TITULO__</div><span id="cont" class="mu"></span><button class="ic" onclick="hoja(true)">⋯</button></div>
  <div class="prog"><i id="pok"></i><i id="pev"></i><i id="pmal"></i></div>
+ <div class="estado"><span class="txt" id="guard"></span><button class="enviar" id="benv" onclick="enviar()">Enviar</button></div>
 </header>
+<div id="toast"></div>
 <main class="grid" id="g"></main>
 <button class="fab" id="fab" onclick="seguir()">Revisar</button>
 <div id="hoja" onclick="if(event.target==this)hoja(false)"><div class="panel">
  <div id="ley"></div><div class="sep"></div>
  <button class="fila" onclick="mini=!mini;guardarPref();pintar();hoja(true)"><span>Cajas en miniaturas</span><span id="swmini" class="sw"></span></button>
  <button class="fila" onclick="cambiarFiltro()"><span>Mostrar</span><span class="mu" id="lfiltro"></span></button>
- <button class="fila" onclick="descargar()"><span>Descargar resultados</span><span class="mu">CSV</span></button>
- <button class="fila" onclick="exportar()"><span>Exportar correcciones</span><span class="mu" id="ned"></span></button>
+ <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
+ <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div>__NAVEGACION__
 </div></div>
 <div id="ver">
- <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="sp"></span>
+ <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
   <button class="ic" id="bzoom" onclick="cambiarZoom()">1×</button><button class="ic" id="bed" onclick="alternarEdicion()">✎</button></div>
  <div class="img"><div id="lienzo"><img id="vi" draggable="false"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg></div><div id="ve"></div></div>
  <div id="edbar"><div class="chips" id="chips"></div>
@@ -190,7 +202,29 @@ const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
 let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
-function guardar(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones))}catch(e){}}
+let enviado={marcas:{},ediciones:{},t:0};
+try{enviado=JSON.parse(localStorage.getItem(CLAVE+"_env")||"null")||enviado}catch(e){}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+let timerToast=0;
+function aviso(txt,err){const t=$("toast");t.textContent=txt;t.classList.toggle("err",!!err);t.classList.add("on");
+  clearTimeout(timerToast);timerToast=setTimeout(()=>t.classList.remove("on"),err?4000:1300);}
+function guardar(txt){
+  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));
+    if(localStorage.getItem(CLAVE)!==JSON.stringify(marcas))throw 0;
+    if(txt)aviso(txt);return true;}
+  catch(e){aviso("⚠ No se pudo guardar. ¿Modo incógnito?",true);return false;}
+}
+/* fotos con cambios desde el último envío */
+function sinEnviar(){const n=new Set();
+  const cmp=(a,b)=>{for(const k of new Set([...Object.keys(a),...Object.keys(b)]))if(JSON.stringify(a[k])!==JSON.stringify(b[k]))n.add(k);};
+  cmp(marcas,enviado.marcas||{});cmp(ediciones,enviado.ediciones||{});return n.size;}
+function hace(t){const m=Math.round((Date.now()-t)/60000);return m<1?"hace un momento":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`;}
+function pintarEstado(){
+  const h=Object.keys(marcas).length,e=Object.keys(ediciones).length,p=sinEnviar();
+  let t=h||e?`<b>✓ ${h} guardada${h==1?"":"s"}</b>${e?` · ${e} ✎`:""}`:"Se guarda solo en este celular";
+  if(p)t+=` · <span class="pend">${p} sin enviar</span>`;else if(enviado.t)t+=` · enviado ${hace(enviado.t)}`;
+  $("guard").innerHTML=t;$("benv").style.display=h||e?"":"none";$("benv").classList.toggle("urg",p>=20);
+  $("ned").textContent=p?p+" sin enviar":enviado.t?"todo enviado":"";}
 function guardarPref(){try{localStorage.setItem("fresas_mini",mini?"1":"0")}catch(e){}}
 const COLORES={"unripe":"#34c759","early-pink":"#ff8fd8","commercial-basic":"#ff9f0a","commercial-high":"#ff453a","overripe":"#bf5af2"};
 const EXTRA=["#64d2ff","#ffd60a","#0a84ff","#ffffff"];
@@ -220,7 +254,6 @@ const FILTROS={todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisa
 function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="pend"?!m:m==filtro);}
 function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
 function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
-  $("ned").textContent=Object.keys(ediciones).length+" fotos";
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
   $("ley").innerHTML=Object.keys(n).sort().map(l=>`<span><i style="background:${color(l)}"></i>${l} ${n[l]}</span>`).join("");}
 function pintar(){
@@ -235,6 +268,7 @@ function pintar(){
   const v=Object.values(marcas),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length,t=DATOS.length,hechas=ok+mal+ev;
   $("cont").textContent=(filtro=="todas"?"":FILTROS[filtro]+" · ")+`${hechas}/${t}`;
   $("pok").style.width=ok/t*100+"%";$("pev").style.width=ev/t*100+"%";$("pmal").style.width=mal/t*100+"%";
+  pintarEstado();
   $("fab").textContent=filtro!="todas"?"Revisar "+orden.length:hechas==0?"Empezar":hechas>=t?"Listo ✓":"Continuar";
 }
 function seguir(){if(!orden.length)return;if(filtro!="todas"){abrir(orden[0]);return;}const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
@@ -242,6 +276,7 @@ function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
   $("vs").innerHTML=mostrarAnot||editando?svgDe(f,editando):"";pintarCapa();
   $("vpos").textContent=`${orden.indexOf(actual)+1} / ${orden.length}`;
   $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");$("bev").classList.toggle("on",m=="ev");
+  const ve=$("vest");ve.className="chipest "+(m||"");ve.textContent=(m?{ok:"Bien",mal:"Mal",ev:"Evaluar"}[m]:"Sin marcar")+(d.orig in ediciones?" · ✎":"");
   if(editando)pintarChips();}
 function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
@@ -250,17 +285,18 @@ function pintarChips(){
 function abrir(i){actual=i;sel=-1;$("vi").onload=()=>aplicarVista(false);$("vi").src=DATOS[i].img;$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
 function cerrar(){if(editando)alternarEdicion();$("ver").style.display="none";pintar();}
 function mover(k){const n=orden[orden.indexOf(actual)+k];if(n!==undefined)abrir(n);else cerrar();}
-function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar();pintarVisor();return;}guardar();
+function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar("Marca quitada");pintarVisor();return;}
+  guardar("✓ Guardado: "+{ok:"Bien",mal:"Mal",ev:"Evaluar"}[v]);
   pintarVisor();setTimeout(()=>mover(1),150);}
 function alternarEdicion(){editando=!editando;sel=-1;
   $("ver").classList.toggle("editando",editando);$("bed").classList.toggle("on",editando);pintarVisor();setTimeout(()=>aplicarVista(false),0);}
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
-function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar();pintarVisor();}
+function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar("✓ Cajas guardadas");pintarVisor();}
 function ponerEtiqueta(l){etiquetaNueva=l;if(sel>=0){editables()[sel].label=l;cambio();}else pintarChips();}
 function nuevaCaja(){const f=editables(),l=etiquetaNueva||(f[0]&&f[0].label)||Object.keys(COLORES)[0];
   f.push(deCaja(l,[.42,.42,.58,.58]));sel=f.length-1;cambio();}
 function borrarCaja(){if(sel<0)return;editables().splice(sel,1);sel=-1;cambio();}
-function restaurar(){if(confirm("¿Volver a las cajas originales de esta foto?")){delete ediciones[DATOS[actual].orig];sel=-1;guardar();pintarVisor();}}
+function restaurar(){if(confirm("¿Volver a las cajas originales de esta foto?")){delete ediciones[DATOS[actual].orig];sel=-1;guardar("Cajas originales restauradas");pintarVisor();}}
 function punto(ev){const r=$("vi").getBoundingClientRect();
   return[Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))];}
 
@@ -345,18 +381,23 @@ function soltarDedo(ev){
   if(g.tipo=="pendiente"&&ev.type=="pointerup")toque(ev);
 }
 vista.addEventListener("pointerup",soltarDedo);vista.addEventListener("pointercancel",soltarDedo);
-function bajar(nombre,contenido,tipo){
+function bajar(nombre,contenido,tipo,listo){
   const archivo=new File([contenido],nombre,{type:tipo});
-  if(navigator.canShare&&navigator.canShare({files:[archivo]})){navigator.share({files:[archivo],title:nombre}).catch(()=>{});return;}
-  const a=document.createElement("a");a.href=URL.createObjectURL(archivo);a.download=nombre;a.click();
+  if(navigator.canShare&&navigator.canShare({files:[archivo]})){navigator.share({files:[archivo],title:nombre}).then(()=>listo&&listo()).catch(()=>{});return;}
+  const a=document.createElement("a");a.href=URL.createObjectURL(archivo);a.download=nombre;a.click();listo&&listo();
+}
+function enviar(){
+  if(!Object.keys(marcas).length&&!Object.keys(ediciones).length){aviso("Todavía no hay nada que enviar");return;}
+  const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
+  const datos={lote:LOTE,fecha:new Date().toISOString(),marcas:m,correcciones:ediciones};
+  bajar(`revision_${LOTE}.json`,JSON.stringify(datos,null,1),"application/json",()=>{
+    enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),t:Date.now()};
+    try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}
+    hoja(false);pintar();aviso("✓ Archivo listo: revision_"+LOTE+".json");});
 }
 function descargar(){
   const filas=["archivo,estado,editada"].concat(DATOS.map(d=>`"${d.orig}",${{ok:"bien",mal:"mal",ev:"evaluar"}[marcas[d.orig]]||"sin_revisar"},${d.orig in ediciones?"si":"no"}`));
   bajar(`resultado_${LOTE}.csv`,filas.join("\n"),"text/csv");
-}
-function exportar(){
-  if(!Object.keys(ediciones).length){alert("Todavía no editaste ninguna caja en este lote.");return;}
-  bajar(`correcciones_${LOTE}.json`,JSON.stringify({lote:LOTE,correcciones:ediciones},null,1),"application/json");
 }
 pintar();
 </script></body></html>
@@ -389,13 +430,17 @@ a{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px so
 a b{font-weight:500;width:64px}
 .bar{flex:1;height:4px;background:#2a2a2e;border-radius:2px;display:flex;overflow:hidden}
 .bar i{display:block;height:100%}
-.n{color:#8a8a90;font-size:13px;width:64px;text-align:right}
+.n{color:#8a8a90;font-size:13px;width:74px;text-align:right;line-height:1.25}
+.n em{font-style:normal;color:#ffd60a;font-size:11px}
+p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
+<p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
 <script>
 const LOTES=__LOTES__;
-document.getElementById("l").innerHTML=LOTES.map(([n,t])=>{let m={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}")}catch(e){}
+document.getElementById("l").innerHTML=LOTES.map(([n,t])=>{let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
+  const pend=JSON.stringify(m)!==JSON.stringify(env.marcas||{})||JSON.stringify(ed)!==JSON.stringify(env.ediciones||{});
   const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length;
-  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}</span></a>`}).join("");
+  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
 </script></body></html>
 """
 
@@ -455,7 +500,15 @@ def nombres_yolo(origen):
 def aplicar_correcciones(origen, archivo):
     """Escribe en las anotaciones originales las cajas editadas desde el celular."""
     datos = json.loads(Path(archivo).read_text(encoding="utf-8"))
-    correcciones = datos.get("correcciones", datos)
+    correcciones = datos.get("correcciones", {} if "marcas" in datos else datos)
+    if datos.get("marcas"):
+        csv = Path(archivo).with_name(f"resultado_{datos.get('lote', 'lote')}.csv")
+        with open(csv, "w", encoding="utf-8-sig") as f:
+            f.write("archivo,estado,editada\n")
+            for orig, est in sorted(datos["marcas"].items()):
+                f.write(f'"{orig}",{est},{"si" if orig in correcciones else "no"}\n')
+        cuenta = {e: list(datos["marcas"].values()).count(e) for e in ("bien", "mal", "evaluar")}
+        print(f"Marcas: {cuenta['bien']} bien, {cuenta['mal']} mal, {cuenta['evaluar']} evaluar -> {csv}")
     clases = None
     hechas = 0
     for orig, figs in correcciones.items():
@@ -495,7 +548,10 @@ def aplicar_correcciones(origen, archivo):
                            for label, x1, y1, x2, y2 in cajas]
             j.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
         hechas += 1
-    print(f"Correcciones aplicadas: {hechas} imágenes. Los originales quedaron como .bak")
+    if hechas:
+        print(f"Cajas corregidas en {hechas} imágenes. Los archivos anteriores quedaron como .bak")
+    else:
+        print("No hay cajas editadas en este archivo.")
 
 
 def respaldo(archivo):
@@ -514,7 +570,7 @@ def main():
     ap.add_argument("--lote", type=int, default=300, help="imágenes por lote (300)")
     ap.add_argument("--solo", type=int, nargs="+", help="generar solo estos lotes, ej. --solo 1")
     ap.add_argument("--aplicar", metavar="JSON",
-                    help="aplicar correcciones_lote_XX.json exportado desde el celular")
+                    help="aplicar revision_lote_XX.json enviado desde el celular")
     ap.add_argument("--max-lado", type=int, default=1280, help="tamaño máx. de las copias")
     a = ap.parse_args()
     if a.rehacer_html:
