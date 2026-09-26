@@ -12,7 +12,7 @@ git commit -m "Lote 1 (300 imágenes) para revisión"
 git push
 ```
 
-Después activa GitHub Pages (Settings → Pages → rama `main`, carpeta `/root`) y abre desde el celular:
+Después activa GitHub Pages (Settings → Pages → la rama donde subiste el lote, carpeta `/root`) y abre desde el celular:
 `https://jairocustodio-jc.github.io/DatasetFresas/revision/lote_01/index.html`
 
 Para los siguientes lotes usa `--solo 2`, `--solo 3`, …, y repite el `git add`, `commit` y `push`.
