@@ -136,16 +136,17 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .vtop .sp{flex:1}
 #bzoom{font-size:13px;font-weight:600}
 #bed.on{background:var(--ac);color:#000}
-#ver .img{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
-#lienzo{position:relative;max-width:100%;max-height:100%}
-#lienzo.ed{touch-action:none}
-#ver img{max-width:100vw;max-height:calc(100vh - 140px);display:block;user-select:none;-webkit-user-drag:none}
+#ver .img{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;touch-action:none;user-select:none;-webkit-user-select:none}
+#lienzo{position:relative;transform-origin:0 0;--s:1}
+#lienzo.anim{transition:transform .22s ease-out}
+#ver img{max-width:100vw;max-height:calc(100vh - 140px);display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+#ver.editando img{max-height:calc(100vh - 190px)}
 #ver svg,#ve{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#ver.zoom .img{display:block;overflow:auto}
-#ver.zoom #lienzo{max-width:none;max-height:none;width:max-content}
-#ver.zoom img{max-width:none;max-height:none}
+#vs polygon{stroke-width:calc(2px / var(--s))}
 .e{position:absolute;transform:translateY(-100%);color:#000;font-size:10px;font-weight:600;padding:0 4px;border-radius:3px 3px 0 0;white-space:nowrap;pointer-events:none;opacity:.9}
-.h{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border:2px solid #fff;border-radius:50%;background:#0006}
+.h{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;background:#0006}
+#ve{overflow:hidden}
+#bzoom{min-width:44px;width:auto;border-radius:18px;padding:0 8px}
 #edbar{display:none;align-items:center;gap:4px;padding:8px 8px 0}
 #ver.editando #edbar{display:flex}
 .chips{flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
@@ -174,7 +175,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="sp"></span>
   <button class="ic" id="bzoom" onclick="cambiarZoom()">1×</button><button class="ic" id="bed" onclick="alternarEdicion()">✎</button></div>
- <div class="img"><div id="lienzo"><img id="vi" draggable="false"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg><div id="ve"></div></div></div>
+ <div class="img"><div id="lienzo"><img id="vi" draggable="false"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg></div><div id="ve"></div></div>
  <div id="edbar"><div class="chips" id="chips"></div>
   <button class="ic" title="Nueva caja" onclick="nuevaCaja()">＋</button><button class="ic" title="Borrar caja" onclick="borrarCaja()">⌫</button><button class="ic" title="Volver al original" onclick="restaurar()">↺</button></div>
  <div class="vbar"><button class="nav" onclick="mover(-1)">‹</button><button class="b mal" id="bmal" onclick="marcar('mal')">Mal</button>
@@ -184,7 +185,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null,zoom=1,anchoBase=0;
+let marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 function guardar(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones))}catch(e){}}
 function guardarPref(){try{localStorage.setItem("fresas_mini",mini?"1":"0")}catch(e){}}
@@ -199,12 +200,19 @@ function deCaja(label,[x1,y1,x2,y2]){return{label,pts:[[x1,y1],[x2,y1],[x2,y2],[
 function svgDe(figs,conSel){
   return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join("");
 }
+/* etiquetas y esquinas en píxeles de pantalla (fuera del zoom, siempre nítidas) */
 function etqDe(figs,conSel){
-  let h=figs.map(f=>{const[x,y]=caja(f);return `<span class="e" style="left:${x*100}%;top:${y*100}%;background:${color(f.label)}">${f.label}</span>`}).join("");
+  const r=$("vi").getBoundingClientRect(),v=document.querySelector("#ver .img").getBoundingClientRect();
+  const X=x=>(r.left-v.left+x*r.width).toFixed(1)+"px",Y=y=>(r.top-v.top+y*r.height).toFixed(1)+"px";
+  let h=figs.map(f=>{const[x,y]=caja(f);return `<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}</span>`}).join("");
   if(conSel&&sel>=0&&figs[sel]){const[x1,y1,x2,y2]=caja(figs[sel]);
-    [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${x*100}%;top:${y*100}%"></span>`);}
+    [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${X(x)};top:${Y(y)}"></span>`);}
   return h;
 }
+function pintarCapa(){if(actual<0)return;$("ve").innerHTML=mostrarAnot||editando?etqDe(figsDe(DATOS[actual]),editando):"";}
+let rafCapa=0;
+function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
+  const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
 function hoja(on){$("hoja").classList.toggle("on",on);$("swmini").classList.toggle("on",mini);
   $("ned").textContent=Object.keys(ediciones).length+" fotos";
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
@@ -222,7 +230,7 @@ function pintar(){
 }
 function seguir(){const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
 function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
-  $("vs").innerHTML=mostrarAnot||editando?svgDe(f,editando):"";$("ve").innerHTML=mostrarAnot||editando?etqDe(f,editando):"";
+  $("vs").innerHTML=mostrarAnot||editando?svgDe(f,editando):"";pintarCapa();
   $("vpos").textContent=`${actual+1} / ${DATOS.length}`;
   $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");
   if(editando)pintarChips();}
@@ -230,18 +238,13 @@ function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
   $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
 }
-function abrir(i){if(zoom>1){zoom=3;cambiarZoom();}actual=i;sel=-1;$("vi").src=DATOS[i].img;pintarVisor();$("ver").style.display="flex";}
+function abrir(i){actual=i;sel=-1;$("vi").onload=()=>aplicarVista(false);$("vi").src=DATOS[i].img;$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
 function cerrar(){if(editando)alternarEdicion();$("ver").style.display="none";pintar();}
 function mover(k){const n=actual+k;if(n>=0&&n<DATOS.length)abrir(n);else cerrar();}
 function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar();pintarVisor();return;}guardar();
   pintarVisor();setTimeout(()=>mover(1),150);}
 function alternarEdicion(){editando=!editando;sel=-1;
-  $("ver").classList.toggle("editando",editando);$("lienzo").classList.toggle("ed",editando);$("bed").classList.toggle("on",editando);pintarVisor();}
-function cambiarZoom(){const vi=$("vi"),ver=$("ver"),cont=ver.querySelector(".img");
-  if(zoom==1)anchoBase=vi.getBoundingClientRect().width;
-  const r=vi.getBoundingClientRect(),cr=cont.getBoundingClientRect(),cx=(cr.left+cont.clientWidth/2-r.left)/r.width,cy=(cr.top+cont.clientHeight/2-r.top)/r.height;
-  zoom=zoom>=3?1:zoom+1;ver.classList.toggle("zoom",zoom>1);vi.style.width=zoom>1?anchoBase*zoom+"px":"";$("bzoom").textContent=zoom+"×";
-  if(zoom>1){const n=vi.getBoundingClientRect();cont.scrollLeft=cx*n.width-cont.clientWidth/2;cont.scrollTop=cy*n.height-cont.clientHeight/2;}}
+  $("ver").classList.toggle("editando",editando);$("bed").classList.toggle("on",editando);pintarVisor();setTimeout(()=>aplicarVista(false),0);}
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
 function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar();pintarVisor();}
 function ponerEtiqueta(l){etiquetaNueva=l;if(sel>=0){editables()[sel].label=l;cambio();}else pintarChips();}
@@ -251,35 +254,88 @@ function borrarCaja(){if(sel<0)return;editables().splice(sel,1);sel=-1;cambio();
 function restaurar(){if(confirm("¿Volver a las cajas originales de esta foto?")){delete ediciones[DATOS[actual].orig];sel=-1;guardar();pintarVisor();}}
 function punto(ev){const r=$("vi").getBoundingClientRect();
   return[Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))];}
-const lienzo=$("lienzo");
-lienzo.addEventListener("click",()=>{if(!editando){mostrarAnot=!mostrarAnot;pintarVisor();}});
-lienzo.addEventListener("pointerdown",ev=>{
-  if(!editando)return;ev.preventDefault();
+
+/* ---------- Zoom y gestos: pellizcar, doble toque, arrastrar, deslizar ---------- */
+const vista=document.querySelector("#ver .img"),lienzo=$("lienzo"),ZMAX=8;
+let esc=1,tx=0,ty=0;
+const dedos=new Map();let gesto=null,ultimoToque=null,timerToque=null;
+function base(){return{W:vista.clientWidth,H:vista.clientHeight,w:lienzo.offsetWidth,h:lienzo.offsetHeight,ox:lienzo.offsetLeft,oy:lienzo.offsetTop};}
+function limitar(){const b=base(),sw=b.w*esc,sh=b.h*esc;
+  tx=sw<=b.W?(b.W-sw)/2-b.ox:Math.min(-b.ox,Math.max(b.W-sw-b.ox,tx));
+  ty=sh<=b.H?(b.H-sh)/2-b.oy:Math.min(-b.oy,Math.max(b.H-sh-b.oy,ty));}
+function aplicarVista(anim,sinLimite){if(!sinLimite)limitar();
+  lienzo.classList.toggle("anim",!!anim);lienzo.style.transform=`translate(${tx}px,${ty}px) scale(${esc})`;lienzo.style.setProperty("--s",esc);anim?seguirCapa(260):pintarCapa();
+  $("bzoom").textContent=esc<1.05?"1×":(Math.round(esc*10)/10)+"×";}
+function reiniciarZoom(anim){esc=1;tx=0;ty=0;aplicarVista(anim);}
+/* zoom a "nueva" escala manteniendo fijo el punto de pantalla (px,py) */
+function zoomEn(nueva,px,py,anim){const vr=vista.getBoundingClientRect(),b=base();
+  const ox=vr.left+b.ox,oy=vr.top+b.oy,cx=(px-ox-tx)/esc,cy=(py-oy-ty)/esc;
+  esc=Math.min(ZMAX,Math.max(1,nueva));tx=px-ox-esc*cx;ty=py-oy-esc*cy;aplicarVista(anim);}
+function cambiarZoom(){const vr=vista.getBoundingClientRect();
+  if(esc>1.05)reiniciarZoom(true);else zoomEn(2.5,vr.left+vr.width/2,vr.top+vr.height/2,true);}
+vista.addEventListener("wheel",ev=>{ev.preventDefault();zoomEn(esc*Math.exp(-ev.deltaY*(ev.ctrlKey?.01:.002)),ev.clientX,ev.clientY,false);},{passive:false});
+window.addEventListener("resize",()=>{if($("ver").style.display=="flex")aplicarVista(false);});
+function dosDedos(){const[a,b]=[...dedos.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+function iniciarPinza(){if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover"))cambio();
+  const m=dosDedos();gesto={tipo:"pinza",d0:m.d,x0:m.x,y0:m.y,e0:esc,tx0:tx,ty0:ty};}
+function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,tx0:tx,ty0:ty,t0:Date.now()};
+  if(!editando)return;
   const p=punto(ev),f=figsDe(DATOS[actual]),r=$("vi").getBoundingClientRect(),tol=22/r.width,tolY=22/r.height;
   if(sel>=0&&f[sel]){const[x1,y1,x2,y2]=caja(f[sel]);
     const esq=[[x1,y1],[x2,y1],[x2,y2],[x1,y2]].findIndex(([x,y])=>Math.abs(p[0]-x)<tol&&Math.abs(p[1]-y)<tolY);
-    if(esq>=0){arrastre={tipo:"esq",esq,caja:[x1,y1,x2,y2]};lienzo.setPointerCapture(ev.pointerId);return;}}
+    if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2]};return;}}
   let mejor=-1,area=9;
   f.forEach((fi,i)=>{const[x1,y1,x2,y2]=caja(fi);if(p[0]>=x1&&p[0]<=x2&&p[1]>=y1&&p[1]<=y2&&(x2-x1)*(y2-y1)<area){mejor=i;area=(x2-x1)*(y2-y1);}});
-  sel=mejor;
-  if(sel<0&&zoom>1){const c=document.querySelector("#ver .img");arrastre={tipo:"pan",x:ev.clientX,y:ev.clientY,sl:c.scrollLeft,st:c.scrollTop};lienzo.setPointerCapture(ev.pointerId);}
-  if(sel>=0){arrastre={tipo:"mover",inicio:p,caja:caja(f[sel])};lienzo.setPointerCapture(ev.pointerId);}
-  pintarVisor();
+  if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel])};pintarVisor();}
+}
+vista.addEventListener("pointerdown",ev=>{
+  if(ev.pointerType=="mouse"&&ev.button!==0)return;
+  try{vista.setPointerCapture(ev.pointerId)}catch(e){}dedos.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if(dedos.size==2)iniciarPinza();else if(dedos.size==1)iniciarUnDedo(ev);
 });
-lienzo.addEventListener("pointermove",ev=>{
-  if(!arrastre)return;
-  if(arrastre.tipo=="pan"){const c=document.querySelector("#ver .img");c.scrollLeft=arrastre.sl-(ev.clientX-arrastre.x);c.scrollTop=arrastre.st-(ev.clientY-arrastre.y);return;}
-  const p=punto(ev),f=editables();let[x1,y1,x2,y2]=arrastre.caja;
-  if(arrastre.tipo=="mover"){let dx=p[0]-arrastre.inicio[0],dy=p[1]-arrastre.inicio[1];
-    dx=Math.min(1-x2,Math.max(-x1,dx));dy=Math.min(1-y2,Math.max(-y1,dy));x1+=dx;x2+=dx;y1+=dy;y2+=dy;}
-  else{const e=arrastre.esq;if(e==0||e==3)x1=p[0];else x2=p[0];if(e<2)y1=p[1];else y2=p[1];}
-  f[sel]=deCaja(f[sel].label,[Math.min(x1,x2),Math.min(y1,y2),Math.max(x1,x2),Math.max(y1,y2)]);
-  if(arrastre.tipo=="esq"){const c=arrastre.caja=caja(f[sel]),q=[[c[0],c[1]],[c[2],c[1]],[c[2],c[3]],[c[0],c[3]]];
-    arrastre.esq=q.map(([x,y],i)=>[Math.hypot(x-p[0],y-p[1]),i]).sort((a,b)=>a[0]-b[0])[0][1];}
-  pintarVisor();
+vista.addEventListener("pointermove",ev=>{
+  if(!dedos.has(ev.pointerId)||!gesto)return;dedos.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if(gesto.tipo=="pinza"){if(dedos.size<2)return;const m=dosDedos(),vr=vista.getBoundingClientRect(),b=base();
+    const ox=vr.left+b.ox,oy=vr.top+b.oy,cx=(gesto.x0-ox-gesto.tx0)/gesto.e0,cy=(gesto.y0-oy-gesto.ty0)/gesto.e0;
+    esc=Math.min(ZMAX,Math.max(.8,gesto.e0*m.d/gesto.d0));tx=m.x-ox-esc*cx;ty=m.y-oy-esc*cy;
+    aplicarVista(false,esc<1);return;}
+  const dx=ev.clientX-(gesto.x0??0),dy=ev.clientY-(gesto.y0??0);
+  if(gesto.tipo=="pendiente"&&Math.hypot(dx,dy)>8)gesto.tipo=esc>1.02?"pan":"deslizar";
+  if(gesto.tipo=="pan"){tx=gesto.tx0+dx;ty=gesto.ty0+dy;aplicarVista(false);return;}
+  if(gesto.tipo=="deslizar"){if(!editando){lienzo.classList.remove("anim");lienzo.style.transform=`translate(${gesto.tx0+dx}px,${gesto.ty0}px)`;pintarCapa();}return;}
+  if(gesto.tipo=="esq"||gesto.tipo=="mover"){
+    const p=punto(ev),f=editables();let[x1,y1,x2,y2]=gesto.caja;
+    if(gesto.tipo=="mover"){let mx=p[0]-gesto.inicio[0],my=p[1]-gesto.inicio[1];
+      mx=Math.min(1-x2,Math.max(-x1,mx));my=Math.min(1-y2,Math.max(-y1,my));x1+=mx;x2+=mx;y1+=my;y2+=my;}
+    else{const e=gesto.esq;if(e==0||e==3)x1=p[0];else x2=p[0];if(e<2)y1=p[1];else y2=p[1];}
+    f[sel]=deCaja(f[sel].label,[Math.min(x1,x2),Math.min(y1,y2),Math.max(x1,x2),Math.max(y1,y2)]);
+    if(gesto.tipo=="esq"){const c=gesto.caja=caja(f[sel]),q=[[c[0],c[1]],[c[2],c[1]],[c[2],c[3]],[c[0],c[3]]];
+      gesto.esq=q.map(([x,y],i)=>[Math.hypot(x-p[0],y-p[1]),i]).sort((a,b)=>a[0]-b[0])[0][1];}
+    pintarVisor();}
 });
-function soltar(){if(arrastre){const t=arrastre.tipo;arrastre=null;if(t!="pan")cambio();}}
-lienzo.addEventListener("pointerup",soltar);lienzo.addEventListener("pointercancel",soltar);
+function toque(ev){
+  const ahora=Date.now();
+  if(ultimoToque&&ahora-ultimoToque.t<300&&Math.hypot(ev.clientX-ultimoToque.x,ev.clientY-ultimoToque.y)<40){
+    clearTimeout(timerToque);ultimoToque=null;
+    if(esc>1.05)reiniciarZoom(true);else zoomEn(2.5,ev.clientX,ev.clientY,true);return;}
+  ultimoToque={t:ahora,x:ev.clientX,y:ev.clientY};
+  timerToque=setTimeout(()=>{ultimoToque=null;
+    if(editando){if(sel>=0){sel=-1;pintarVisor();}}else{mostrarAnot=!mostrarAnot;pintarVisor();}},280);
+}
+function soltarDedo(ev){
+  if(!dedos.has(ev.pointerId))return;dedos.delete(ev.pointerId);
+  const g=gesto;if(!g)return;
+  if(g.tipo=="pinza"){
+    if(dedos.size==1){const[id,d]=[...dedos.entries()][0];gesto={tipo:"pan",x0:d.x,y0:d.y,tx0:tx,ty0:ty};}
+    else gesto=null;
+    if(esc<1.05)reiniciarZoom(true);else aplicarVista(true);return;}
+  if(dedos.size>0)return;gesto=null;
+  if(g.tipo=="esq"||g.tipo=="mover"){cambio();return;}
+  if(g.tipo=="deslizar"){const dx=ev.clientX-g.x0,dy=ev.clientY-g.y0;
+    if(!editando&&Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5&&ev.type=="pointerup"){mover(dx<0?1:-1);}else aplicarVista(true);return;}
+  if(g.tipo=="pendiente"&&ev.type=="pointerup")toque(ev);
+}
+vista.addEventListener("pointerup",soltarDedo);vista.addEventListener("pointercancel",soltarDedo);
 function bajar(nombre,contenido,tipo){
   const archivo=new File([contenido],nombre,{type:tipo});
   if(navigator.canShare&&navigator.canShare({files:[archivo]})){navigator.share({files:[archivo],title:nombre}).catch(()=>{});return;}

@@ -22,7 +22,7 @@ Antes de cada lote nuevo corre `git pull`. Para los siguientes lotes usa `--solo
 1. Abre una foto y toca ✎ (arriba a la derecha) para entrar en modo edición.
 2. Toca una caja para seleccionarla: aparecen 4 círculos en sus esquinas. Arrastra una esquina para cambiar el tamaño o arrastra el centro para mover la caja.
 3. Los estados de abajo cambian la etiqueta de la caja seleccionada. ＋ agrega una caja, ⌫ borra la seleccionada y ↺ vuelve a las cajas originales de esa foto.
-4. El botón 1×/2×/3× hace zoom. Con zoom, arrastrar sobre una zona vacía mueve la imagen.
+4. El zoom funciona igual que al revisar. Con zoom, arrastrar sobre una zona sin caja mueve la foto; pellizcar con dos dedos siempre hace zoom.
 5. Al terminar el lote, abre el menú **⋯** y pulsa **Exportar correcciones**. Se descarga o comparte `correcciones_lote_XX.json`; pásalo a la PC por WhatsApp, correo o Drive.
 6. En la PC:
    ```powershell
@@ -55,6 +55,7 @@ El script crea `revision\` con `lote_01` … `lote_10` (300 fotos cada uno, redu
 
 - Pulsa **Empezar** (o **Continuar**) para abrir la primera foto sin revisar. Marca **Bien** o **Mal** y pasa sola a la siguiente; ‹ › avanzan sin marcar.
 - Toca la foto para ocultar o mostrar las cajas.
+- **Zoom:** pellizca con dos dedos o haz doble toque donde quieras acercar (otro doble toque vuelve al tamaño normal). Con zoom, un dedo mueve la foto. Sin zoom, deslizar a la izquierda o a la derecha pasa a la foto siguiente o anterior. El botón «1×» de arriba también acerca o restablece.
 - En la cuadrícula, el punto verde o rojo indica el estado y ✎ indica que la foto tiene cajas editadas.
 - El menú **⋯** tiene la leyenda de estados, la descarga del CSV (`resultado_lote_XX.csv`), la exportación de correcciones y la navegación entre lotes.
 - Las marcas se guardan en el navegador del celular.
