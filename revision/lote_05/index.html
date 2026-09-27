@@ -52,6 +52,8 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 #vs,#ve{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #vs polygon{stroke-width:calc(2px / var(--s))}
 .e{position:absolute;transform:translateY(-100%);color:#000;font-size:10px;font-weight:600;padding:0 4px;border-radius:3px 3px 0 0;white-space:nowrap;pointer-events:none;opacity:.9}
+.e .sg{font-weight:700;padding:0 3px;border-radius:3px;margin-left:2px;outline:1px solid #0006}
+.chip.sug{box-shadow:inset 0 0 0 1.5px var(--ev);color:var(--tx)}
 .h{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;background:#0006}
 #ve{overflow:hidden}
 #bzoom{min-width:44px;width:auto;border-radius:18px;padding:0 8px}
@@ -175,14 +177,15 @@ const $=id=>document.getElementById(id);
 function figsDe(d){return ediciones[d.orig]||d.figs;}
 function caja(f){const xs=f.pts.map(p=>p[0]),ys=f.pts.map(p=>p[1]);return[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];}
 function deCaja(label,[x1,y1,x2,y2]){return{label,pts:[[x1,y1],[x2,y1],[x2,y2],[x1,y2]]};}
+function sugDe(f){return f.sug&&f.sug!==f.label?f.sug:null;}
 function svgDe(figs,conSel){
-  return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join("");
+  return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"${sugDe(f)?' stroke-dasharray="6 4"':""}/>`).join("");
 }
 /* etiquetas y esquinas en píxeles de pantalla (fuera del zoom, siempre nítidas) */
 function etqDe(figs,conSel){
   const r=$("vi").getBoundingClientRect(),v=document.querySelector("#ver .img").getBoundingClientRect();
   const X=x=>(r.left-v.left+x*r.width).toFixed(1)+"px",Y=y=>(r.top-v.top+y*r.height).toFixed(1)+"px";
-  let h=figs.map(f=>{const[x,y]=caja(f);return `<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}</span>`}).join("");
+  let h=figs.map(f=>{const[x,y]=caja(f),s=sugDe(f);return `<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}${s?` <b class="sg" style="background:${color(s)}">¿${s}?</b>`:""}</span>`}).join("");
   if(conSel&&sel>=0&&figs[sel]){const[x1,y1,x2,y2]=caja(figs[sel]);
     [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${X(x)};top:${Y(y)}"></span>`);}
   return h;
@@ -192,8 +195,9 @@ function pintarCapa(){if(actual<0)return;$("ve").innerHTML=verCajas()?etqDe(figs
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
-const FILTROS={todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
-function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="pend"?!m:m==filtro);}
+const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe));
+const FILTROS=HAY_SUG?{todas:"Todas",sug:"Con sugerencia",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"}:{todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
+function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe):filtro=="pend"?!m:m==filtro);}
 function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
 function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
@@ -203,7 +207,7 @@ function pintar(){
   DATOS.forEach((d,i)=>{
     if(!pasaFiltro(d))return;orden.push(i);
     const c=document.createElement("div");c.className="c "+(marcas[d.orig]||"");
-    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':""}`;
+    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':figsDe(d).some(sugDe)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
   if(!orden.length)g.innerHTML=`<div class="vacio">No hay fotos en «${FILTROS[filtro]}»</div>`;
@@ -222,7 +226,8 @@ function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
   if(editando)pintarChips();}
 function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
-  $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
+  const sg=sel>=0&&f[sel]?sugDe(f[sel]):null;
+  $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""} ${l==sg&&l!=act?"sug":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
 }
 let cargando=false;
 function abrir(i){actual=i;sel=-1;const vi=$("vi");
@@ -267,7 +272,7 @@ function cambiarZoom(){const vr=vista.getBoundingClientRect();
 vista.addEventListener("wheel",ev=>{ev.preventDefault();zoomEn(esc*Math.exp(-ev.deltaY*(ev.ctrlKey?.01:.002)),ev.clientX,ev.clientY,false);},{passive:false});
 window.addEventListener("resize",()=>{if($("ver").style.display=="flex")aplicarVista(false);});
 function dosDedos(){const[a,b]=[...dedos.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
-function iniciarPinza(){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover"))cambio();
+function iniciarPinza(){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover")&&gesto.activo)cambio();
   const m=dosDedos();gesto={tipo:"pinza",d0:m.d,x0:m.x,y0:m.y,e0:esc,tx0:tx,ty0:ty};}
 let timerPeek=0;
 function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,tx0:tx,ty0:ty,t0:Date.now()};
@@ -276,10 +281,10 @@ function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,t
   const p=punto(ev),f=figsDe(DATOS[actual]),r=$("vi").getBoundingClientRect(),tol=22/r.width,tolY=22/r.height;
   if(sel>=0&&f[sel]){const[x1,y1,x2,y2]=caja(f[sel]);
     const esq=[[x1,y1],[x2,y1],[x2,y2],[x1,y2]].findIndex(([x,y])=>Math.abs(p[0]-x)<tol&&Math.abs(p[1]-y)<tolY);
-    if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2]};return;}}
+    if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2],sx:ev.clientX,sy:ev.clientY};return;}}
   let mejor=-1,area=9;
   f.forEach((fi,i)=>{const[x1,y1,x2,y2]=caja(fi);if(p[0]>=x1&&p[0]<=x2&&p[1]>=y1&&p[1]<=y2&&(x2-x1)*(y2-y1)<area){mejor=i;area=(x2-x1)*(y2-y1);}});
-  if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel])};pintarVisor();}
+  if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel]),sx:ev.clientX,sy:ev.clientY};pintarVisor();}
 }
 vista.addEventListener("pointerdown",ev=>{
   if(ev.pointerType=="mouse"&&ev.button!==0)return;
@@ -297,6 +302,9 @@ vista.addEventListener("pointermove",ev=>{
   if(gesto.tipo=="pan"){tx=gesto.tx0+dx;ty=gesto.ty0+dy;aplicarVista(false);return;}
   if(gesto.tipo=="deslizar"){if(!editando){lienzo.classList.remove("anim");lienzo.style.transform=`translate(${gesto.tx0+dx}px,${gesto.ty0}px)`;pintarCapa();}return;}
   if(gesto.tipo=="esq"||gesto.tipo=="mover"){
+    /* un toque para seleccionar no debe mover la caja: solo cuenta si el dedo se desplaza >8 px */
+    if(!gesto.activo){if(Math.hypot(ev.clientX-gesto.sx,ev.clientY-gesto.sy)<8)return;gesto.activo=true;
+      if(gesto.tipo=="mover")gesto.inicio=punto(ev);}
     const p=punto(ev),f=editables();let[x1,y1,x2,y2]=gesto.caja;
     if(gesto.tipo=="mover"){let mx=p[0]-gesto.inicio[0],my=p[1]-gesto.inicio[1];
       mx=Math.min(1-x2,Math.max(-x1,mx));my=Math.min(1-y2,Math.max(-y1,my));x1+=mx;x2+=mx;y1+=my;y2+=my;}
@@ -324,7 +332,7 @@ function soltarDedo(ev){
     else gesto=null;
     if(esc<1.05)reiniciarZoom(true);else aplicarVista(true);return;}
   if(dedos.size>0)return;gesto=null;
-  if(g.tipo=="esq"||g.tipo=="mover"){cambio();return;}
+  if(g.tipo=="esq"||g.tipo=="mover"){if(g.activo)cambio();return;}
   if(g.tipo=="deslizar"){const dx=ev.clientX-g.x0,dy=ev.clientY-g.y0;
     if(!editando&&Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5&&ev.type=="pointerup"){mover(dx<0?1:-1);}else aplicarVista(true);return;}
   if(g.tipo=="pendiente"&&ev.type=="pointerup")toque(ev);

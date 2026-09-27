@@ -19,6 +19,9 @@ import sys
 from pathlib import Path
 
 EXT_IMG = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+ORDEN = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
+METRICAS = ("color_pct", "rojo_intenso_pct")  # medidas por caja que calcula el agente de la PC
+UMBRALES_AGENTE = [0.5, 50, 75, 90]              # % de superficie rosa/roja entre estados consecutivos
 
 
 def es_imagen(p):
@@ -56,8 +59,11 @@ def leer_anotacion(img):
                     if s.get("shape_type") == "rectangle" and len(pts) == 2:
                         (x1, y1), (x2, y2) = pts
                         pts = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
-                    figs.append({"label": s.get("label", ""), "i": len(figs),
-                                 "pts": [[x / w, y / h] for x, y in pts]})
+                    fig = {"label": s.get("label", ""), "i": len(figs), "pts": [[x / w, y / h] for x, y in pts]}
+                    at = s.get("attributes") or {}
+                    if isinstance(at, dict) and any(k in at for k in METRICAS):
+                        fig["m"] = {k: at[k] for k in METRICAS if isinstance(at.get(k), (int, float))}
+                    figs.append(fig)
                 return figs
         except (ValueError, KeyError, TypeError):
             pass
@@ -145,6 +151,10 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 #vs,#ve{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #vs polygon{stroke-width:calc(2px / var(--s))}
 .e{position:absolute;transform:translateY(-100%);color:#000;font-size:10px;font-weight:600;padding:0 4px;border-radius:3px 3px 0 0;white-space:nowrap;pointer-events:none;opacity:.9}
+.e.cs{background:none;padding:0;display:flex;flex-direction:column-reverse;align-items:flex-start;gap:2px;opacity:1}
+.e.cs i{font-style:normal;padding:0 4px;border-radius:3px 3px 0 0;opacity:.9}
+.e .sg{font-weight:700;padding:0 4px;border-radius:3px;box-shadow:0 0 0 1px #000a}
+.chip.sug{box-shadow:inset 0 0 0 1.5px var(--ev);color:var(--tx)}
 .h{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;background:#0006}
 #ve{overflow:hidden}
 #bzoom{min-width:44px;width:auto;border-radius:18px;padding:0 8px}
@@ -268,14 +278,17 @@ const $=id=>document.getElementById(id);
 function figsDe(d){return ediciones[d.orig]||d.figs;}
 function caja(f){const xs=f.pts.map(p=>p[0]),ys=f.pts.map(p=>p[1]);return[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];}
 function deCaja(label,[x1,y1,x2,y2]){return{label,pts:[[x1,y1],[x2,y1],[x2,y2],[x1,y2]]};}
+function sugDe(f){return f.sug&&f.sug!==f.label?f.sug:null;}
 function svgDe(figs,conSel){
-  return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join("");
+  return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"${sugDe(f)?' stroke-dasharray="6 4"':""}/>`).join("");
 }
 /* etiquetas y esquinas en píxeles de pantalla (fuera del zoom, siempre nítidas) */
 function etqDe(figs,conSel){
   const r=$("vi").getBoundingClientRect(),v=document.querySelector("#ver .img").getBoundingClientRect();
   const X=x=>(r.left-v.left+x*r.width).toFixed(1)+"px",Y=y=>(r.top-v.top+y*r.height).toFixed(1)+"px";
-  let h=figs.map(f=>{const[x,y]=caja(f);return `<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}</span>`}).join("");
+  let h=figs.map(f=>{const[x,y]=caja(f),s=sugDe(f);return s
+    ?`<span class="e cs" style="left:${X(x)};top:${Y(y)}"><i style="background:${color(f.label)}">${f.label}</i><b class="sg" style="background:${color(s)}">¿${s}?</b></span>`
+    :`<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}</span>`}).join("");
   if(conSel&&sel>=0&&figs[sel]){const[x1,y1,x2,y2]=caja(figs[sel]);
     [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${X(x)};top:${Y(y)}"></span>`);}
   return h;
@@ -285,8 +298,9 @@ function pintarCapa(){if(actual<0)return;$("ve").innerHTML=verCajas()?etqDe(figs
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
-const FILTROS={todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
-function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="pend"?!m:m==filtro);}
+const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe));
+const FILTROS=HAY_SUG?{todas:"Todas",sug:"Con sugerencia",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"}:{todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
+function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe):filtro=="pend"?!m:m==filtro);}
 function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
 function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
@@ -296,7 +310,7 @@ function pintar(){
   DATOS.forEach((d,i)=>{
     if(!pasaFiltro(d))return;orden.push(i);
     const c=document.createElement("div");c.className="c "+(marcas[d.orig]||"");
-    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':""}`;
+    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':figsDe(d).some(sugDe)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
   if(!orden.length)g.innerHTML=`<div class="vacio">No hay fotos en «${FILTROS[filtro]}»</div>`;
@@ -315,7 +329,8 @@ function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
   if(editando)pintarChips();}
 function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
-  $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
+  const sg=sel>=0&&f[sel]?sugDe(f[sel]):null;
+  $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""} ${l==sg&&l!=act?"sug":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
 }
 let cargando=false;
 function abrir(i){actual=i;sel=-1;const vi=$("vi");
@@ -360,7 +375,7 @@ function cambiarZoom(){const vr=vista.getBoundingClientRect();
 vista.addEventListener("wheel",ev=>{ev.preventDefault();zoomEn(esc*Math.exp(-ev.deltaY*(ev.ctrlKey?.01:.002)),ev.clientX,ev.clientY,false);},{passive:false});
 window.addEventListener("resize",()=>{if($("ver").style.display=="flex")aplicarVista(false);});
 function dosDedos(){const[a,b]=[...dedos.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
-function iniciarPinza(){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover"))cambio();
+function iniciarPinza(){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover")&&gesto.activo)cambio();
   const m=dosDedos();gesto={tipo:"pinza",d0:m.d,x0:m.x,y0:m.y,e0:esc,tx0:tx,ty0:ty};}
 let timerPeek=0;
 function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,tx0:tx,ty0:ty,t0:Date.now()};
@@ -369,10 +384,10 @@ function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,t
   const p=punto(ev),f=figsDe(DATOS[actual]),r=$("vi").getBoundingClientRect(),tol=22/r.width,tolY=22/r.height;
   if(sel>=0&&f[sel]){const[x1,y1,x2,y2]=caja(f[sel]);
     const esq=[[x1,y1],[x2,y1],[x2,y2],[x1,y2]].findIndex(([x,y])=>Math.abs(p[0]-x)<tol&&Math.abs(p[1]-y)<tolY);
-    if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2]};return;}}
+    if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2],sx:ev.clientX,sy:ev.clientY};return;}}
   let mejor=-1,area=9;
   f.forEach((fi,i)=>{const[x1,y1,x2,y2]=caja(fi);if(p[0]>=x1&&p[0]<=x2&&p[1]>=y1&&p[1]<=y2&&(x2-x1)*(y2-y1)<area){mejor=i;area=(x2-x1)*(y2-y1);}});
-  if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel])};pintarVisor();}
+  if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel]),sx:ev.clientX,sy:ev.clientY};pintarVisor();}
 }
 vista.addEventListener("pointerdown",ev=>{
   if(ev.pointerType=="mouse"&&ev.button!==0)return;
@@ -390,6 +405,9 @@ vista.addEventListener("pointermove",ev=>{
   if(gesto.tipo=="pan"){tx=gesto.tx0+dx;ty=gesto.ty0+dy;aplicarVista(false);return;}
   if(gesto.tipo=="deslizar"){if(!editando){lienzo.classList.remove("anim");lienzo.style.transform=`translate(${gesto.tx0+dx}px,${gesto.ty0}px)`;pintarCapa();}return;}
   if(gesto.tipo=="esq"||gesto.tipo=="mover"){
+    /* un toque para seleccionar no debe mover la caja: solo cuenta si el dedo se desplaza >8 px */
+    if(!gesto.activo){if(Math.hypot(ev.clientX-gesto.sx,ev.clientY-gesto.sy)<8)return;gesto.activo=true;
+      if(gesto.tipo=="mover")gesto.inicio=punto(ev);}
     const p=punto(ev),f=editables();let[x1,y1,x2,y2]=gesto.caja;
     if(gesto.tipo=="mover"){let mx=p[0]-gesto.inicio[0],my=p[1]-gesto.inicio[1];
       mx=Math.min(1-x2,Math.max(-x1,mx));my=Math.min(1-y2,Math.max(-y1,my));x1+=mx;x2+=mx;y1+=my;y2+=my;}
@@ -417,7 +435,7 @@ function soltarDedo(ev){
     else gesto=null;
     if(esc<1.05)reiniciarZoom(true);else aplicarVista(true);return;}
   if(dedos.size>0)return;gesto=null;
-  if(g.tipo=="esq"||g.tipo=="mover"){cambio();return;}
+  if(g.tipo=="esq"||g.tipo=="mover"){if(g.activo)cambio();return;}
   if(g.tipo=="deslizar"){const dx=ev.clientX-g.x0,dy=ev.clientY-g.y0;
     if(!editando&&Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5&&ev.type=="pointerup"){mover(dx<0?1:-1);}else aplicarVista(true);return;}
   if(g.tipo=="pendiente"&&ev.type=="pointerup")toque(ev);
@@ -608,7 +626,7 @@ def leer_lista(archivo):
     return nombres
 
 
-def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None, lista=None, prefijo="lote"):
+def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None, lista=None, prefijo="lote", criterios=None):
     origen = (raiz / carpeta) if carpeta else raiz
     if not origen.is_dir():
         sys.exit(f"No existe la carpeta: {origen}")
@@ -630,6 +648,8 @@ def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None, lista=None, pre
     lotes = [imgs[i:i + tam] for i in range(0, len(imgs), tam)]
     nombres = [f"{prefijo}_{i + 1:02d}" for i in range(len(lotes))]
     print(f"{len(lotes)} lotes de hasta {tam} fotos")
+    if criterios:
+        print("Usando tus criterios de feedback/criterios.json para sugerir correcciones.")
     for i, (nombre, grupo) in enumerate(zip(nombres, lotes)):
         if solo and (i + 1) not in solo:
             continue
@@ -638,12 +658,129 @@ def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None, lista=None, pre
         datos = []
         for k, img in enumerate(grupo):
             archivo = copiar_imagen(img, dir_lote / "img" / f"{k + 1:03d}", max_lado)
+            figs = leer_anotacion(img)
+            if criterios:
+                sugerir(figs, criterios)
             datos.append({"orig": img.relative_to(origen).as_posix(),
-                          "img": f"img/{archivo}", "figs": leer_anotacion(img)})
+                          "img": f"img/{archivo}", "figs": figs})
         escribir_html(dir_lote, nombres, i, datos)
         print(f"  {nombre}: {len(grupo)} imágenes")
     rehacer_html(salida)  # índice y flechas ◀ ▶ solo con los lotes que existen
     print(f"\nListo. Abre {salida / 'index.html'}")
+
+
+def clase_segun(m, criterios):
+    """Estado que corresponde a una caja según los umbrales aprendidos (None si faltan medidas)."""
+    k = 0
+    for frontera in criterios["fronteras"]:
+        if frontera is None:
+            return None
+        v = m.get(frontera["medida"])
+        if v is None:
+            return None
+        if v >= frontera["umbral"]:
+            k += 1
+        else:
+            break
+    return ORDEN[k]
+
+
+def sugerir(figs, criterios):
+    for f in figs:
+        m = f.get("m")
+        if not m or f["label"] not in ORDEN:
+            continue
+        c = clase_segun(m, criterios)
+        if c and c != f["label"]:
+            f["sug"] = c
+
+
+def mejor_umbral(valores_bajo, valores_alto, referencia):
+    """Umbral que mejor separa dos estados consecutivos (menos errores). Entre los que empatan
+    se elige el más cercano al del agente (referencia), para no inventar diferencias donde
+    los datos no las muestran. Devuelve (umbral, errores)."""
+    todos = sorted(set(valores_bajo) | set(valores_alto))
+    candidatos = [(a + b) / 2 for a, b in zip(todos, todos[1:])] + todos + [referencia]
+    def errores(t):
+        return sum(v >= t for v in valores_bajo) + sum(v < t for v in valores_alto)
+    minimo = min(errores(t) for t in candidatos)
+    iguales = [t for t in candidatos if errores(t) == minimo]
+    # dentro del tramo sin cambio de errores, acercarse todo lo posible a la referencia
+    t = min(iguales, key=lambda t: abs(t - referencia))
+    lo = max([v for v in todos if v < t], default=None)
+    hi = min([v for v in todos if v >= t], default=None)
+    if lo is not None and hi is not None and lo < referencia <= hi:
+        t = referencia
+    elif hi is not None and lo is not None and referencia > hi:
+        t = hi
+    elif lo is not None and referencia <= lo:
+        t = lo + 1e-6 if errores(lo + 1e-6) == minimo else t
+    return t, errores(t)
+
+
+def aprender_criterios(origen, archivos, destino):
+    """Aprende tus umbrales a partir de las fotos que ya revisaste y aplicaste."""
+    cajas, cambios = [], {}
+    for archivo in archivos:
+        datos = json.loads(Path(archivo).read_text(encoding="utf-8"))
+        for orig in datos.get("marcas", {}):
+            j = (origen / orig).with_suffix(".json")
+            if not j.exists():
+                continue
+            d = json.loads(j.read_text(encoding="utf-8"))
+            for sh in d.get("shapes", []):
+                at = sh.get("attributes") or {}
+                if sh.get("label") in ORDEN and isinstance(at, dict):
+                    cajas.append((sh["label"], {k: at[k] for k in METRICAS if isinstance(at.get(k), (int, float))}))
+        for orig, figs in datos.get("correcciones", {}).items():
+            antes = datos.get("originales", {}).get(orig)
+            if not antes:
+                continue
+            for f in asignar_indices(figs, antes) if not any("i" in x for x in figs) else figs:
+                o = next((x for x in antes if x.get("i") == f.get("i")), None) if "i" in f else None
+                if o and o["label"] != f["label"]:
+                    cambios[(o["label"], f["label"])] = cambios.get((o["label"], f["label"]), 0) + 1
+    con_medidas = [(l, m) for l, m in cajas if m]
+    print(f"\nCajas revisadas por ti: {len(cajas)} ({len(con_medidas)} con medidas del agente)")
+    if cambios:
+        print("Etiquetas que cambiaste (antes -> tu corrección):")
+        for (a, b), n in sorted(cambios.items(), key=lambda x: -x[1]):
+            print(f"  {a:>17} -> {b:<17} {n}")
+    if not con_medidas:
+        print("Las anotaciones no tienen 'attributes' con color_pct: no se pueden aprender umbrales.")
+        return None
+    fronteras = []
+    print("\nFrontera                            agente    tú (medida)                 errores")
+    for k in range(len(ORDEN) - 1):
+        bajo = [m for l, m in con_medidas if l == ORDEN[k]]
+        alto = [m for l, m in con_medidas if l == ORDEN[k + 1]]
+        mejor = None
+        for medida in METRICAS:
+            vb = [m[medida] for m in bajo if medida in m]
+            va = [m[medida] for m in alto if medida in m]
+            if len(vb) < 5 or len(va) < 5:
+                continue
+            t, err = mejor_umbral(vb, va, UMBRALES_AGENTE[k] if medida == "color_pct" else
+                                  (sum(vb) / len(vb) + sum(va) / len(va)) / 2)
+            if t is not None and (mejor is None or err / (len(vb) + len(va)) < mejor["error"]):
+                mejor = {"medida": medida, "umbral": round(t, 1), "error": round(err / (len(vb) + len(va)), 3),
+                         "n": len(vb) + len(va)}
+        fronteras.append(mejor)
+        nombre = f"{ORDEN[k]} | {ORDEN[k + 1]}"
+        if mejor:
+            print(f"  {nombre:<34} {UMBRALES_AGENTE[k]:>5}%   {mejor['umbral']:>5} ({mejor['medida']:<16}) "
+                  f"{mejor['error'] * 100:5.1f}% de {mejor['n']}")
+        else:
+            print(f"  {nombre:<34} {UMBRALES_AGENTE[k]:>5}%   (pocos ejemplos, sin sugerencias)")
+    criterios = {"fronteras": fronteras, "orden": ORDEN, "umbrales_agente": UMBRALES_AGENTE,
+                 "cajas": len(con_medidas), "cambios": {f"{a} -> {b}": n for (a, b), n in cambios.items()},
+                 "fuentes": [Path(a).name for a in archivos],
+                 "fecha": datetime.datetime.now().astimezone().isoformat(timespec="seconds")}
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(json.dumps(criterios, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"\nGuardado en {destino}. Los próximos lotes que generes marcarán las cajas donde tu criterio")
+    print("no coincide con la etiqueta actual (filtro «Con sugerencia» en la página).")
+    return criterios
 
 
 def nombres_yolo(origen):
@@ -669,6 +806,29 @@ def misma_caja(a, b, tol=1e-4):
     return all(abs(u - v) <= tol for u, v in zip(a_caja(a), a_caja(b)))
 
 
+def iou(a, b):
+    ax1, ay1, ax2, ay2 = a_caja(a)
+    bx1, by1, bx2, by2 = a_caja(b)
+    inter = max(0, min(ax2, bx2) - max(ax1, bx1)) * max(0, min(ay2, by2) - max(ay1, by1))
+    union = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - inter
+    return inter / union if union else 0
+
+
+def asignar_indices(figs, originales, minimo=0.3):
+    """Da a cada caja editada el índice de la caja original con la que más se superpone
+    (emparejamiento voraz por IoU ≥ minimo). Las que no se parecen a ninguna quedan como nuevas."""
+    pares = sorted(((iou(o["pts"], f["pts"]), o.get("i", k), j)
+                    for k, o in enumerate(originales) for j, f in enumerate(figs)), reverse=True)
+    usados_o, asignado = set(), {}
+    for v, i, j in pares:
+        if v < minimo or i in usados_o or j in asignado:
+            continue
+        usados_o.add(i)
+        asignado[j] = i
+    return [dict(f, i=asignado[j]) if j in asignado else {k: v for k, v in f.items() if k != "i"}
+            for j, f in enumerate(figs)]
+
+
 def fusionar_json(d, figs, originales):
     """Aplica las ediciones del celular sobre las cajas del JSON sin perder sus metadatos.
 
@@ -680,7 +840,9 @@ def fusionar_json(d, figs, originales):
     w, h = d["imageWidth"], d["imageHeight"]
     previas = d.get("shapes", [])
     if originales is not None and figs and not any("i" in f for f in figs):
-        originales = None  # editada con una versión anterior de la página: emparejar por posición
+        # editada con una versión anterior de la página (sin índice por caja): se empareja cada
+        # caja con la original que más se le superpone, no por su orden en la lista
+        figs = asignar_indices(figs, originales)
     orig_por_i = {f.get("i", k): f for k, f in enumerate(originales)} if originales is not None else None
     nuevas, mapa, recalcular = [], {k: None for k in range(len(previas))}, []
     for k, f in enumerate(figs):
@@ -691,7 +853,8 @@ def fusionar_json(d, figs, originales):
             o = orig_por_i.get(i) if orig_por_i is not None else None
             if o is None or f["label"] != o["label"]:
                 base["label"] = f["label"]
-            if o is None or not misma_caja(f["pts"], o["pts"]):
+            # un desplazamiento mínimo (IoU ≥ 0,97) se toma como toque accidental y se ignora
+            if o is None or not (misma_caja(f["pts"], o["pts"]) or iou(f["pts"], o["pts"]) >= 0.97):
                 antes = base.get("points")
                 base["points"] = [[x1 * w, y1 * h], [x2 * w, y2 * h]]
                 base["shape_type"] = "rectangle"
@@ -842,12 +1005,18 @@ def main():
                     help="nombre de los lotes (por defecto «lote», o el nombre del archivo de --lista)")
     ap.add_argument("--aplicar", metavar="JSON",
                     help="aplicar revision_lote_XX.json enviado desde el celular")
+    ap.add_argument("--feedback", metavar="JSON", nargs="+",
+                    help="aprender tus criterios de revision_lote_XX.json ya aplicados (escribe feedback/criterios.json)")
     ap.add_argument("--max-lado", type=int, default=1280, help="tamaño máx. de las copias")
     a = ap.parse_args()
     if a.rehacer_html:
         return rehacer_html(a.salida)
     if a.raiz is None or not a.raiz.is_dir():
         sys.exit(f"No existe: {a.raiz}")
+    ruta_criterios = Path(__file__).resolve().parent / "feedback" / "criterios.json"
+    if a.feedback:
+        aprender_criterios(a.raiz / (a.carpeta or "."), a.feedback, ruta_criterios)
+        return
     if a.aplicar:
         aplicar_correcciones(a.raiz / (a.carpeta or "."), a.aplicar, a.salida)
     elif a.carpeta is None:
@@ -855,8 +1024,11 @@ def main():
     else:
         prefijo = a.prefijo or (Path(a.lista).stem if a.lista else "lote")
         prefijo = "".join(c if c.isalnum() else "_" for c in prefijo).strip("_").lower() or "lote"
+        criterios = None
+        if ruta_criterios.exists():
+            criterios = json.loads(ruta_criterios.read_text(encoding="utf-8"))
         armar_lotes(a.raiz, None if a.carpeta == "." else a.carpeta, a.salida, a.lote, a.max_lado,
-                    a.solo, a.lista, prefijo)
+                    a.solo, a.lista, prefijo, criterios)
 
 
 if __name__ == "__main__":

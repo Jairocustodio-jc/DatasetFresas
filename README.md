@@ -24,9 +24,11 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
 | Subir a la página | `git add -A` · `git commit -m "Lote N"` · `git push` |
 | Aplicar lo enviado desde el celular | `python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar revision_lote_01.json` |
 | Actualizar las páginas tras cambiar el script | `python revisar_fresas.py --rehacer-html` |
+| Aprender tus criterios de lotes ya revisados | `python revisar_fresas.py $raiz --carpeta dataset_5estados --feedback feedback\revision_lote_01.json` |
 
 - **Fotos:** solo se toman las de la raíz de la carpeta. La copia de `yolo/images/` se ignora.
 - **`--lista`:** acepta un `.txt` con un nombre por línea o un `.csv` con la columna `imagen`, como `cambios.csv` o `revisar.csv` del informe. Los lotes toman el nombre del archivo (`cambios_01`, …); `--prefijo` lo cambia.
+- **`--feedback`:** cruza tus etiquetas con `color_pct` y `rojo_intenso_pct` del agente, calcula tus umbrales entre estados y los guarda en `feedback/criterios.json`. Los lotes que se generen después marcan con línea punteada y «¿estado?» las cajas donde tu criterio no coincide con la etiqueta; el filtro **Mostrar → Con sugerencia** lleva a esas fotos. Ver `feedback/FEEDBACK_LOTE_01.md`.
 - **`--aplicar`:**
   - crea `resultado_<lote>.csv` con el estado de cada foto;
   - en el `.json` solo escribe lo que se cambió en el celular: la etiqueta si se cambió, la posición si se movió;
