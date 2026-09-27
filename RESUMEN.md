@@ -20,12 +20,12 @@ Revisar desde el celular (por ejemplo, en el carro) el dataset de fresas guardad
 | Dato | Valor |
 |---|---|
 | Carpeta | `dataset_5estados` |
-| Imágenes | **6198** (PNG, 1008 × 756 px) |
-| Lotes | **21**: del 1 al 20 con 300 fotos cada uno y el 21 con 198 |
+| Imágenes | **3099** (PNG, 1008 × 756 px) |
+| Lotes | **11**: del 1 al 10 con 300 fotos cada uno y el 11 con 99 |
 | Anotaciones | LabelMe (`.json`), cajas rectangulares |
 | Estados (clases) | `unripe`, `early-pink`, `commercial-basic`, `commercial-high`, `overripe` |
 
-Al principio se esperaban 3000 imágenes, pero hay 6198. Se decidió revisar todas.
+Al principio el script contaba 6198 imágenes porque incluía la copia de `yolo/images/`. El agente de la PC lo detectó y ahora solo se toman las 3099 de la raíz. Ese mismo agente corrigió 1445 etiquetas y agregó metadatos por caja (`difficult`, `flags`, `attributes`); ver `NOTAS_PARA_AGENTE_PC.md`.
 
 ## 3. Cómo funciona
 
@@ -97,6 +97,7 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
 | Qué | Comando |
 |---|---|
 | Ver las carpetas del dataset | `python revisar_fresas.py $raiz` |
+| Lotes por prioridad (p. ej. los cambios del agente) | `python revisar_fresas.py $raiz --carpeta dataset_5estados --lista "$raiz\informe\cambios.csv"` |
 | Generar el lote N | `python revisar_fresas.py $raiz --carpeta dataset_5estados --solo N` |
 | Subir el lote | `git add -A` → `git commit -m "Lote N"` → `git push` |
 | Aplicar lo revisado en el celular | `python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar revision_lote_NN.json` |
@@ -121,12 +122,14 @@ Qué hace `--aplicar`:
 | Página amontonada | Rediseño minimalista con menú ⋯ |
 | Zoom poco práctico | Gestos táctiles: pellizcar, doble toque, arrastrar, deslizar |
 | No quedaba claro qué se había guardado | Avisos «✓ Guardado», contador «sin enviar» y botón Enviar |
+| Fotos duplicadas por `yolo/images/` (6198 en vez de 3099) | Solo se toman las fotos de la raíz |
+| `--aplicar` borraba los metadatos de las cajas | Fusión caja por caja que solo escribe lo cambiado |
 
 ## 7. Estado actual
 
-- ✅ Lotes **1, 2 y 3** publicados (900 de 6198 fotos).
+- ✅ Lotes **1, 2 y 3** publicados (900 de 3099 fotos).
 - ✅ Página con revisión, filtro, edición de cajas, zoom y envío.
-- ⏳ Faltan los lotes **4 al 21**.
+- ⏳ Faltan los lotes **4 al 11**. Además, hay que regenerar los lotes 1–3 (`--solo 1 2 3`) para que muestren las etiquetas actualizadas.
 - ⏳ El lote 1 está en revisión (13 o más fotos marcadas en el celular).
 
 ## 8. Límites que conviene conocer
@@ -134,7 +137,7 @@ Qué hace `--aplicar`:
 - **Lo revisado vive en el navegador del celular** hasta que pulsas **Enviar**. Si borras los datos del navegador, cambias de teléfono o usas otro navegador, no aparece. En iPhone, Safari puede borrar datos de páginas que no abres en unos 7 días. Envía cada cierto tiempo.
 - Las fotos originales miden 1008 × 756 px, así que a partir de unos 3× de zoom se ven pixeladas.
 - Si el repositorio es privado, GitHub Pages puede requerir un plan pago.
-- `--aplicar` escribe todas las cajas de una foto como rectángulos.
+- `--aplicar` solo escribe lo que se cambió en el celular, conserva los metadatos de cada caja y regenera `yolo/labels`. Las cajas movidas o nuevas quedan listadas en `mapa_indices_<lote>.json` para recalcular sus métricas.
 - La edición en la página y `--aplicar` se probaron en un navegador simulando un celular y con archivos de prueba. Todavía no se han probado con dedos reales ni con las anotaciones reales. Conviene revisar 1 o 2 fotos después del primer `--aplicar`.
 
 ## 9. Archivos del repositorio
@@ -144,6 +147,7 @@ Qué hace `--aplicar`:
 | `revisar_fresas.py` | Script: lista las carpetas, genera los lotes y las páginas, aplica las correcciones |
 | `README.md` | Instrucciones de uso |
 | `RESUMEN.md` | Este documento |
+| `NOTAS_PARA_AGENTE_PC.md` | Respuesta al agente que trabaja en la PC |
 | `revision/index.html` | Índice de lotes |
 | `revision/lote_NN/` | Página del lote (`index.html`) y fotos reducidas (`img/`) |
 | `.nojekyll` | Hace que GitHub Pages publique los archivos tal cual |

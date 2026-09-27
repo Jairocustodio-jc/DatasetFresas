@@ -6,7 +6,8 @@
 body{margin:0;font:15px/1.4 system-ui,-apple-system,sans-serif;background:#0e0e10;color:#ececec;padding:24px 16px}
 h1{font-size:22px;font-weight:600;margin:8px 4px 20px}
 a{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid #2a2a2e;color:inherit;text-decoration:none}
-a b{font-weight:500;width:64px}
+a b{font-weight:500;width:96px}
+h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-spacing:.04em;margin:26px 4px 4px}
 .bar{flex:1;height:4px;background:#2a2a2e;border-radius:2px;display:flex;overflow:hidden}
 .bar i{display:block;height:100%}
 .n{color:#8a8a90;font-size:13px;width:74px;text-align:right;line-height:1.25}
@@ -15,9 +16,10 @@ p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
 <script>
-const LOTES=[["lote_01", 300], ["lote_02", 300], ["lote_03", 300]];
-document.getElementById("l").innerHTML=LOTES.map(([n,t])=>{let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
+const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"]];
+let grupo=null;
+document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!==grupo&&LOTES.some(x=>x[3]!==g)?`<h2>${g=="lote"?"En orden":g.replace(/_/g," ")}</h2>`:"";grupo=g;let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
   const pend=JSON.stringify(m)!==JSON.stringify(env.marcas||{})||JSON.stringify(ed)!==JSON.stringify(env.ediciones||{});
   const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length;
-  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
+  return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
 </script></body></html>

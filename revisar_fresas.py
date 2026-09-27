@@ -1,14 +1,14 @@
 """Revisión del dataset de fresas desde el celular.
 
-Paso 1 - ver qué carpetas hay (para identificar la que se arregló):
-    python revisar_fresas.py "D:\\新草莓\\DatasetId_360753_1652783343"
+    python revisar_fresas.py RAIZ                                   # ver carpetas
+    python revisar_fresas.py RAIZ --carpeta dataset_5estados --solo 4
+    python revisar_fresas.py RAIZ --carpeta dataset_5estados --lista informe/cambios.csv --prefijo cambios
+    python revisar_fresas.py RAIZ --carpeta dataset_5estados --aplicar revision_lote_01.json
+    python revisar_fresas.py --rehacer-html
 
-Paso 2 - armar los lotes de 300 imágenes con una página de revisión:
-    python revisar_fresas.py "D:\\新草莓\\DatasetId_360753_1652783343" --carpeta NOMBRE_SUBCARPETA
-
-Se crea la carpeta "revision" (lote_01 ... lote_10). Cada lote tiene un index.html:
-toca una foto para marcarla ✅ bien / ❌ mal / sin marcar, y al final descarga el CSV.
-Si hay anotaciones (LabelMe .json o YOLO .txt con el mismo nombre) se dibujan encima.
+Genera en "revision/" lotes de 300 fotos, cada uno con una página (index.html) para marcar
+Bien / Mal / Evaluar y corregir cajas desde el celular. "Enviar" en la página produce
+revision_<lote>.json, que --aplicar escribe en las anotaciones (LabelMe .json o YOLO .txt).
 """
 import argparse
 import datetime
@@ -56,7 +56,7 @@ def leer_anotacion(img):
                     if s.get("shape_type") == "rectangle" and len(pts) == 2:
                         (x1, y1), (x2, y2) = pts
                         pts = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
-                    figs.append({"label": s.get("label", ""),
+                    figs.append({"label": s.get("label", ""), "i": len(figs),
                                  "pts": [[x / w, y / h] for x, y in pts]})
                 return figs
         except (ValueError, KeyError, TypeError):
@@ -69,10 +69,10 @@ def leer_anotacion(img):
             if len(v) == 5:  # YOLO: clase cx cy w h
                 c, cx, cy, bw, bh = v[0], *map(float, v[1:])
                 x1, y1, x2, y2 = cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2
-                figs.append({"label": c, "pts": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]})
+                figs.append({"label": c, "i": len(figs), "pts": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]})
             elif len(v) > 5 and len(v) % 2 == 1:  # YOLO segmentación
                 n = list(map(float, v[1:]))
-                figs.append({"label": v[0], "pts": [n[i:i + 2] for i in range(0, len(n), 2)]})
+                figs.append({"label": v[0], "i": len(figs), "pts": [n[i:i + 2] for i in range(0, len(n), 2)]})
         return figs
     return []
 
@@ -353,7 +353,7 @@ vista.addEventListener("pointermove",ev=>{
     if(gesto.tipo=="mover"){let mx=p[0]-gesto.inicio[0],my=p[1]-gesto.inicio[1];
       mx=Math.min(1-x2,Math.max(-x1,mx));my=Math.min(1-y2,Math.max(-y1,my));x1+=mx;x2+=mx;y1+=my;y2+=my;}
     else{const e=gesto.esq;if(e==0||e==3)x1=p[0];else x2=p[0];if(e<2)y1=p[1];else y2=p[1];}
-    f[sel]=deCaja(f[sel].label,[Math.min(x1,x2),Math.min(y1,y2),Math.max(x1,x2),Math.max(y1,y2)]);
+    f[sel]={...f[sel],...deCaja(f[sel].label,[Math.min(x1,x2),Math.min(y1,y2),Math.max(x1,x2),Math.max(y1,y2)])};
     if(gesto.tipo=="esq"){const c=gesto.caja=caja(f[sel]),q=[[c[0],c[1]],[c[2],c[1]],[c[2],c[3]],[c[0],c[3]]];
       gesto.esq=q.map(([x,y],i)=>[Math.hypot(x-p[0],y-p[1]),i]).sort((a,b)=>a[0]-b[0])[0][1];}
     pintarVisor();}
@@ -389,7 +389,8 @@ function bajar(nombre,contenido,tipo,listo){
 function enviar(){
   if(!Object.keys(marcas).length&&!Object.keys(ediciones).length){aviso("Todavía no hay nada que enviar");return;}
   const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
-  const datos={lote:LOTE,fecha:new Date().toISOString(),marcas:m,correcciones:ediciones};
+  const originales={};DATOS.forEach(d=>{if(d.orig in ediciones)originales[d.orig]=d.figs;});
+  const datos={formato:2,lote:LOTE,fecha:new Date().toISOString(),marcas:m,correcciones:ediciones,originales};
   bajar(`revision_${LOTE}.json`,JSON.stringify(datos,null,1),"application/json",()=>{
     enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),t:Date.now()};
     try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}
@@ -404,15 +405,27 @@ pintar();
 """
 
 
+def titulo_de(nombre):
+    """lote_01 -> 'Lote 1', cambios_03 -> 'Cambios 3'."""
+    pre, _, num = nombre.rpartition("_")
+    return f"{pre.replace('_', ' ').capitalize()} {int(num)}" if pre and num.isdigit() else nombre
+
+
+def prefijo_de(nombre):
+    pre, _, num = nombre.rpartition("_")
+    return pre if pre and num.isdigit() else nombre
+
+
 def escribir_html(dir_lote, nombres, i, datos):
+    """nombres: lotes del mismo grupo (prefijo), para las flechas anterior/siguiente."""
     nombre = nombres[i]
     nav = ""
     if i > 0:
-        nav += f'<a class="fila" href="../{nombres[i - 1]}/index.html"><span>‹ Lote anterior</span></a>'
+        nav += f'<a class="fila" href="../{nombres[i - 1]}/index.html"><span>‹ {html.escape(titulo_de(nombres[i - 1]))}</span></a>'
     if i < len(nombres) - 1:
-        nav += f'<a class="fila" href="../{nombres[i + 1]}/index.html"><span>Lote siguiente ›</span></a>'
+        nav += f'<a class="fila" href="../{nombres[i + 1]}/index.html"><span>{html.escape(titulo_de(nombres[i + 1]))} ›</span></a>'
     nav += '<a class="fila" href="../index.html"><span>Todos los lotes</span></a>'
-    titulo = f"Lote {int(nombre.split('_')[1])}" if nombre.split("_")[-1].isdigit() else nombre
+    titulo = titulo_de(nombre)
     pagina = (PLANTILLA.replace("__TITULO__", html.escape(titulo))
               .replace("__NAVEGACION__", nav).replace("__LOTE__", json.dumps(nombre))
               .replace("__DATOS__", json.dumps(datos, ensure_ascii=False)))
@@ -427,7 +440,8 @@ INDICE = r"""<!doctype html>
 body{margin:0;font:15px/1.4 system-ui,-apple-system,sans-serif;background:#0e0e10;color:#ececec;padding:24px 16px}
 h1{font-size:22px;font-weight:600;margin:8px 4px 20px}
 a{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid #2a2a2e;color:inherit;text-decoration:none}
-a b{font-weight:500;width:64px}
+a b{font-weight:500;width:96px}
+h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-spacing:.04em;margin:26px 4px 4px}
 .bar{flex:1;height:4px;background:#2a2a2e;border-radius:2px;display:flex;overflow:hidden}
 .bar i{display:block;height:100%}
 .n{color:#8a8a90;font-size:13px;width:74px;text-align:right;line-height:1.25}
@@ -437,41 +451,99 @@ p{color:#8a8a90;font-size:13px;margin:18px 4px}
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
 <script>
 const LOTES=__LOTES__;
-document.getElementById("l").innerHTML=LOTES.map(([n,t])=>{let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
+let grupo=null;
+document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!==grupo&&LOTES.some(x=>x[3]!==g)?`<h2>${g=="lote"?"En orden":g.replace(/_/g," ")}</h2>`:"";grupo=g;let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
   const pend=JSON.stringify(m)!==JSON.stringify(env.marcas||{})||JSON.stringify(ed)!==JSON.stringify(env.ediciones||{});
   const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length;
-  return `<a href="${n}/index.html"><b>Lote ${+n.split("_")[1]}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
+  return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
 </script></body></html>
 """
 
 
+def leer_datos(dir_lote):
+    texto = (dir_lote / "index.html").read_text(encoding="utf-8")
+    inicio = texto.index("const DATOS=") + len("const DATOS=")
+    return json.loads(texto[inicio:texto.index(";\n", inicio)])
+
+
 def rehacer_html(salida):
     """Regenera los index.html de los lotes existentes con la plantilla actual."""
-    dirs = sorted(d for d in salida.glob("lote_*") if (d / "index.html").exists())
-    nombres = [d.name for d in dirs]
-    cantidades = []
-    for i, d in enumerate(dirs):
-        texto = (d / "index.html").read_text(encoding="utf-8")
-        inicio = texto.index("const DATOS=") + len("const DATOS=")
-        datos = json.loads(texto[inicio:texto.index(";\n", inicio)])
-        escribir_html(d, nombres, i, datos)
-        cantidades.append(len(datos))
-    lotes = json.dumps([[n, c] for n, c in zip(nombres, cantidades)])
-    (salida / "index.html").write_text(INDICE.replace("__LOTES__", lotes), encoding="utf-8")
-    print(f"Páginas actualizadas: {', '.join(nombres)}")
+    dirs = sorted(d for d in salida.iterdir()
+                  if d.is_dir() and (d / "index.html").exists() and (d / "img").is_dir())
+    grupos = {}
+    for d in dirs:
+        grupos.setdefault(prefijo_de(d.name), []).append(d)
+    orden = sorted(grupos, key=lambda g: (g != "lote", g))  # «lote» primero
+    lotes = []
+    for g in orden:
+        nombres = [d.name for d in grupos[g]]
+        for i, d in enumerate(grupos[g]):
+            datos = leer_datos(d)
+            for foto in datos:  # lotes generados antes de guardar el índice de cada caja
+                for k, f in enumerate(foto["figs"]):
+                    f.setdefault("i", k)
+            escribir_html(d, nombres, i, datos)
+            lotes.append([d.name, len(datos), titulo_de(d.name), g])
+    (salida / "index.html").write_text(INDICE.replace("__LOTES__", json.dumps(lotes, ensure_ascii=False)),
+                                       encoding="utf-8")
+    print(f"Páginas actualizadas: {', '.join(l[0] for l in lotes)}")
 
 
-def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None):
+def listar_imagenes(origen):
+    """Fotos a revisar. Si la carpeta tiene fotos en su raíz, solo esas (así no entran copias
+    como yolo/images/); si no, se busca en subcarpetas, saltando las de exportación YOLO."""
+    imgs = sorted(p for p in origen.iterdir() if es_imagen(p))
+    if not imgs:
+        imgs = sorted(p for p in origen.rglob("*")
+                      if es_imagen(p) and "yolo" not in (x.lower() for x in p.relative_to(origen).parts))
+    return imgs
+
+
+def leer_lista(archivo):
+    """Nombres de imagen desde un .txt (uno por línea) o un .csv (columna «imagen» o la primera)."""
+    import csv
+    ruta = Path(archivo)
+    texto = ruta.read_text(encoding="utf-8-sig")
+    if ruta.suffix.lower() == ".csv":
+        filas = list(csv.reader(texto.splitlines()))
+        if not filas:
+            return []
+        cab = [c.strip().lower() for c in filas[0]]
+        col = cab.index("imagen") if "imagen" in cab else 0
+        valores = [f[col] for f in filas[1:] if len(f) > col]
+    else:
+        valores = texto.splitlines()
+    vistos, nombres = set(), []
+    for v in valores:
+        v = Path(v.strip().replace("\\", "/")).name
+        if v and v not in vistos:
+            vistos.add(v)
+            nombres.append(v)
+    return nombres
+
+
+def armar_lotes(raiz, carpeta, salida, tam, max_lado, solo=None, lista=None, prefijo="lote"):
     origen = (raiz / carpeta) if carpeta else raiz
     if not origen.is_dir():
         sys.exit(f"No existe la carpeta: {origen}")
-    imgs = sorted(p for p in origen.rglob("*") if es_imagen(p))
+    imgs = listar_imagenes(origen)
     if not imgs:
         sys.exit(f"No hay imágenes en {origen}")
     print(f"Carpeta usada: {origen}\nImágenes encontradas: {len(imgs)}")
+    if lista:
+        por_nombre = {p.name: p for p in imgs}
+        por_nombre.update({p.stem: p for p in imgs if p.stem not in por_nombre})
+        pedidos = leer_lista(lista)
+        imgs = [por_nombre[n] for n in pedidos if n in por_nombre]
+        faltan = [n for n in pedidos if n not in por_nombre]
+        print(f"Lista {lista}: {len(pedidos)} nombres, {len(imgs)} encontrados"
+              + (f", {len(faltan)} no encontrados (ej. {faltan[0]})" if faltan else ""))
+        if not imgs:
+            sys.exit("Ninguna imagen de la lista está en la carpeta.")
     salida.mkdir(parents=True, exist_ok=True)
     lotes = [imgs[i:i + tam] for i in range(0, len(imgs), tam)]
-    nombres = [f"lote_{i + 1:02d}" for i in range(len(lotes))]
+    nombres = [f"{prefijo}_{i + 1:02d}" for i in range(len(lotes))]
+    print(f"{len(lotes)} lotes de hasta {tam} fotos")
     for i, (nombre, grupo) in enumerate(zip(nombres, lotes)):
         if solo and (i + 1) not in solo:
             continue
@@ -497,35 +569,113 @@ def nombres_yolo(origen):
     return []
 
 
+VERSION_LABELME = "4.0.0-beta.7"  # la de los JSON del dataset (AnyLabeling)
+META_NUEVA = {"score": None, "group_id": None, "description": "", "difficult": False,
+              "shape_type": "rectangle", "flags": {}, "attributes": {}, "kie_linking": []}
+
+
+def a_caja(pts):
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def misma_caja(a, b, tol=1e-4):
+    return all(abs(u - v) <= tol for u, v in zip(a_caja(a), a_caja(b)))
+
+
+def fusionar_json(d, figs, originales):
+    """Aplica las ediciones del celular sobre las cajas del JSON sin perder sus metadatos.
+
+    Con «originales» (formato 2) es una fusión a tres bandas por índice de caja: solo se
+    escribe lo que la persona cambió en el celular; si no tocó la etiqueta o la posición,
+    se respeta lo que tenga ahora el JSON (que pudo actualizarse después de generar el lote).
+    Devuelve (shapes nuevas, mapa viejo->nuevo, índices nuevos a recalcular).
+    """
+    w, h = d["imageWidth"], d["imageHeight"]
+    previas = d.get("shapes", [])
+    if originales is not None and figs and not any("i" in f for f in figs):
+        originales = None  # editada con una versión anterior de la página: emparejar por posición
+    orig_por_i = {f.get("i", k): f for k, f in enumerate(originales)} if originales is not None else None
+    nuevas, mapa, recalcular = [], {k: None for k in range(len(previas))}, []
+    for k, f in enumerate(figs):
+        i = f.get("i") if orig_por_i is not None else (k if k < len(previas) else None)
+        x1, y1, x2, y2 = a_caja(f["pts"])
+        if i is not None and i < len(previas):
+            base = json.loads(json.dumps(previas[i]))
+            o = orig_por_i.get(i) if orig_por_i is not None else None
+            if o is None or f["label"] != o["label"]:
+                base["label"] = f["label"]
+            if o is None or not misma_caja(f["pts"], o["pts"]):
+                antes = base.get("points")
+                base["points"] = [[x1 * w, y1 * h], [x2 * w, y2 * h]]
+                base["shape_type"] = "rectangle"
+                if antes != base["points"]:
+                    base["attributes"] = {}  # sus métricas ya no corresponden a la caja
+                    recalcular.append(len(nuevas))
+            mapa[i] = len(nuevas)
+        else:
+            base = json.loads(json.dumps(META_NUEVA))
+            base["label"] = f["label"]
+            base["points"] = [[x1 * w, y1 * h], [x2 * w, y2 * h]]
+            recalcular.append(len(nuevas))
+        nuevas.append(base)
+    return nuevas, mapa, recalcular
+
+
+def exportar_yolo(j, d, origen):
+    """Regenera yolo/labels/<foto>.txt desde el JSON, si la carpeta tiene export YOLO."""
+    dir_yolo = origen / "yolo"
+    clases_txt = dir_yolo / "classes.txt"
+    if not clases_txt.exists():
+        return False
+    clases = [l.strip() for l in clases_txt.read_text(encoding="utf-8").splitlines() if l.strip()]
+    W, H = d["imageWidth"], d["imageHeight"]
+    lineas = []
+    for sh in d["shapes"]:
+        if sh["label"] not in clases:
+            sys.exit(f"'{sh['label']}' no está en {clases_txt}")
+        (x1, y1), (x2, y2) = [min(p[0] for p in sh["points"]), min(p[1] for p in sh["points"])], \
+                             [max(p[0] for p in sh["points"]), max(p[1] for p in sh["points"])]
+        lineas.append(f"{clases.index(sh['label'])} {(x1 + x2) / 2 / W:.6f} {(y1 + y2) / 2 / H:.6f} "
+                      f"{(x2 - x1) / W:.6f} {(y2 - y1) / H:.6f}")
+    destino = dir_yolo / "labels" / (j.stem + ".txt")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if destino.exists():
+        respaldo(destino)
+    destino.write_text("\n".join(lineas) + ("\n" if lineas else ""), encoding="utf-8")
+    return True
+
+
 def aplicar_correcciones(origen, archivo):
-    """Escribe en las anotaciones originales las cajas editadas desde el celular."""
+    """Escribe en las anotaciones originales lo revisado desde el celular."""
     datos = json.loads(Path(archivo).read_text(encoding="utf-8"))
     correcciones = datos.get("correcciones", {} if "marcas" in datos else datos)
+    originales = datos.get("originales", {}) if datos.get("formato", 1) >= 2 else None
+    lote = datos.get("lote", "lote")
     if datos.get("marcas"):
-        csv = Path(archivo).with_name(f"resultado_{datos.get('lote', 'lote')}.csv")
+        csv = Path(archivo).with_name(f"resultado_{lote}.csv")
         with open(csv, "w", encoding="utf-8-sig") as f:
             f.write("archivo,estado,editada\n")
             for orig, est in sorted(datos["marcas"].items()):
                 f.write(f'"{orig}",{est},{"si" if orig in correcciones else "no"}\n')
         cuenta = {e: list(datos["marcas"].values()).count(e) for e in ("bien", "mal", "evaluar")}
         print(f"Marcas: {cuenta['bien']} bien, {cuenta['mal']} mal, {cuenta['evaluar']} evaluar -> {csv}")
+    if correcciones and originales is None:
+        print("Aviso: archivo de una versión anterior de la página; las cajas se emparejan por posición.")
     clases = None
-    hechas = 0
+    hechas, yolo, mapas = 0, 0, {}
     for orig, figs in correcciones.items():
         img = origen / orig
         if not img.exists():
             print(f"  ¡No existe {img}! (¿--carpeta correcta?)")
             continue
-        cajas = []
-        for f in figs:
-            xs, ys = [p[0] for p in f["pts"]], [p[1] for p in f["pts"]]
-            cajas.append((f["label"], min(xs), min(ys), max(xs), max(ys)))
         j, t = img.with_suffix(".json"), img.with_suffix(".txt")
-        if t.exists() and not j.exists():
+        if t.exists() and not j.exists():  # dataset solo YOLO
             if clases is None:
                 clases = nombres_yolo(origen)
             lineas = []
-            for label, x1, y1, x2, y2 in cajas:
+            for f in figs:
+                label, (x1, y1, x2, y2) = f["label"], a_caja(f["pts"])
                 c = label if label.isdigit() else (str(clases.index(label)) if label in clases else None)
                 if c is None:
                     sys.exit(f"No sé el número de clase de '{label}' (falta classes.txt)")
@@ -540,18 +690,28 @@ def aplicar_correcciones(origen, archivo):
                 from PIL import Image
                 with Image.open(img) as im:
                     w, h = im.size
-                d = {"version": "5.0.1", "flags": {}, "imagePath": img.name, "imageData": None,
-                     "imageHeight": h, "imageWidth": w}
-            w, h = d["imageWidth"], d["imageHeight"]
-            d["shapes"] = [{"label": label, "points": [[x1 * w, y1 * h], [x2 * w, y2 * h]],
-                            "group_id": None, "description": "", "shape_type": "rectangle", "flags": {}}
-                           for label, x1, y1, x2, y2 in cajas]
+                d = {"version": VERSION_LABELME, "flags": {}, "shapes": [], "imagePath": img.name,
+                     "imageData": None, "imageHeight": h, "imageWidth": w}
+            d["shapes"], mapa, recalcular = fusionar_json(
+                d, figs, originales.get(orig) if originales is not None else None)
             j.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            cambio_estructura = any(v != k for k, v in mapa.items()) or len(d["shapes"]) != len(mapa)
+            if recalcular or cambio_estructura:
+                mapas[orig] = {"mapa": {str(k): v for k, v in mapa.items()}, "recalcular": recalcular}
+            yolo += exportar_yolo(j, d, origen)
         hechas += 1
     if hechas:
         print(f"Cajas corregidas en {hechas} imágenes. Los archivos anteriores quedaron como .bak")
+        if yolo:
+            print(f"Export YOLO actualizado: {yolo} archivos en {origen / 'yolo' / 'labels'}")
     else:
         print("No hay cajas editadas en este archivo.")
+    if mapas:
+        destino = Path(archivo).with_name(f"mapa_indices_{lote}.json")
+        destino.write_text(json.dumps(mapas, ensure_ascii=False, indent=1), encoding="utf-8")
+        n = sum(len(m["recalcular"]) for m in mapas.values())
+        print(f"{destino}: {len(mapas)} imágenes con cajas movidas, nuevas o borradas "
+              f"({n} cajas sin métricas: hay que recalcular sus atributos)")
 
 
 def respaldo(archivo):
@@ -569,6 +729,10 @@ def main():
     ap.add_argument("--salida", type=Path, default=Path("revision"))
     ap.add_argument("--lote", type=int, default=300, help="imágenes por lote (300)")
     ap.add_argument("--solo", type=int, nargs="+", help="generar solo estos lotes, ej. --solo 1")
+    ap.add_argument("--lista", metavar="ARCHIVO",
+                    help="armar lotes solo con estas imágenes (.txt una por línea o .csv con columna «imagen»)")
+    ap.add_argument("--prefijo", default=None,
+                    help="nombre de los lotes (por defecto «lote», o el nombre del archivo de --lista)")
     ap.add_argument("--aplicar", metavar="JSON",
                     help="aplicar revision_lote_XX.json enviado desde el celular")
     ap.add_argument("--max-lado", type=int, default=1280, help="tamaño máx. de las copias")
@@ -582,7 +746,10 @@ def main():
     elif a.carpeta is None:
         listar_carpetas(a.raiz)
     else:
-        armar_lotes(a.raiz, None if a.carpeta == "." else a.carpeta, a.salida, a.lote, a.max_lado, a.solo)
+        prefijo = a.prefijo or (Path(a.lista).stem if a.lista else "lote")
+        prefijo = "".join(c if c.isalnum() else "_" for c in prefijo).strip("_").lower() or "lote"
+        armar_lotes(a.raiz, None if a.carpeta == "." else a.carpeta, a.salida, a.lote, a.max_lado,
+                    a.solo, a.lista, prefijo)
 
 
 if __name__ == "__main__":
