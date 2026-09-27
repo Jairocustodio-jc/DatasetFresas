@@ -136,12 +136,13 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .vtop .sp{flex:1}
 #bzoom{font-size:13px;font-weight:600}
 #bed.on{background:var(--ac);color:#000}
+#bojo .tachar{display:none}#bojo.off{color:var(--ac)}#bojo.off .tachar{display:inline}
 #ver .img{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;touch-action:none;user-select:none;-webkit-user-select:none}
 #lienzo{position:relative;transform-origin:0 0;--s:1}
 #lienzo.anim{transition:transform .22s ease-out}
 #ver img{max-width:100vw;max-height:calc(100vh - 140px);display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
 #ver.editando img{max-height:calc(100vh - 190px)}
-#ver svg,#ve{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#vs,#ve{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #vs polygon{stroke-width:calc(2px / var(--s))}
 .e{position:absolute;transform:translateY(-100%);color:#000;font-size:10px;font-weight:600;padding:0 4px;border-radius:3px 3px 0 0;white-space:nowrap;pointer-events:none;opacity:.9}
 .h{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;background:#0006}
@@ -189,7 +190,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
-  <button class="ic" id="bzoom" onclick="cambiarZoom()">1×</button><button class="ic" id="bed" onclick="alternarEdicion()">✎</button></div>
+  <button class="ic" id="bojo" title="Mostrar u ocultar cajas" onclick="alternarCajas()"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><line class="tachar" x1="3" y1="3" x2="21" y2="21"/></svg></button><button class="ic" id="bzoom" onclick="cambiarZoom()">1×</button><button class="ic" id="bed" onclick="alternarEdicion()">✎</button></div>
  <div class="img"><div id="lienzo"><img id="vi" draggable="false"><svg id="vs" viewBox="0 0 1 1" preserveAspectRatio="none"></svg></div><div id="ve"></div></div>
  <div id="edbar"><div class="chips" id="chips"></div>
   <button class="ic" title="Nueva caja" onclick="nuevaCaja()">＋</button><button class="ic" title="Borrar caja" onclick="borrarCaja()">⌫</button><button class="ic" title="Volver al original" onclick="restaurar()">↺</button></div>
@@ -200,7 +201,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
+let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0};
 try{enviado=JSON.parse(localStorage.getItem(CLAVE+"_env")||"null")||enviado}catch(e){}
@@ -246,7 +247,8 @@ function etqDe(figs,conSel){
     [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${X(x)};top:${Y(y)}"></span>`);}
   return h;
 }
-function pintarCapa(){if(actual<0)return;$("ve").innerHTML=mostrarAnot||editando?etqDe(figsDe(DATOS[actual]),editando):"";}
+function verCajas(){return !cargando&&(editando||(mostrarAnot&&!ocultoTemp));}
+function pintarCapa(){if(actual<0)return;$("ve").innerHTML=verCajas()?etqDe(figsDe(DATOS[actual]),editando):"";}
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
@@ -273,7 +275,7 @@ function pintar(){
 }
 function seguir(){if(!orden.length)return;if(filtro!="todas"){abrir(orden[0]);return;}const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
 function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
-  $("vs").innerHTML=mostrarAnot||editando?svgDe(f,editando):"";pintarCapa();
+  $("vs").innerHTML=verCajas()?svgDe(f,editando):"";pintarCapa();$("bojo").classList.toggle("off",!mostrarAnot);
   $("vpos").textContent=`${orden.indexOf(actual)+1} / ${orden.length}`;
   $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");$("bev").classList.toggle("on",m=="ev");
   const ve=$("vest");ve.className="chipest "+(m||"");ve.textContent=(m?{ok:"Bien",mal:"Mal",ev:"Evaluar"}[m]:"Sin marcar")+(d.orig in ediciones?" · ✎":"");
@@ -282,12 +284,16 @@ function pintarChips(){
   const f=figsDe(DATOS[actual]),act=sel>=0&&f[sel]?f[sel].label:etiquetaNueva;
   $("chips").innerHTML=Object.keys(COLORES).map(l=>`<button class="chip ${l==act?"act":""}" onclick="ponerEtiqueta('${l}')"><i style="background:${color(l)}"></i>${l}</button>`).join("");
 }
-function abrir(i){actual=i;sel=-1;$("vi").onload=()=>aplicarVista(false);$("vi").src=DATOS[i].img;$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
+let cargando=false;
+function abrir(i){actual=i;sel=-1;const vi=$("vi");
+  vi.onload=vi.onerror=()=>{cargando=false;aplicarVista(false);pintarVisor();};
+  if(vi.getAttribute("src")!==DATOS[i].img){cargando=true;vi.src=DATOS[i].img;}$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
 function cerrar(){if(editando)alternarEdicion();$("ver").style.display="none";pintar();}
 function mover(k){const n=orden[orden.indexOf(actual)+k];if(n!==undefined)abrir(n);else cerrar();}
 function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar("Marca quitada");pintarVisor();return;}
   guardar("✓ Guardado: "+{ok:"Bien",mal:"Mal",ev:"Evaluar"}[v]);
   pintarVisor();setTimeout(()=>mover(1),150);}
+function alternarCajas(){mostrarAnot=!mostrarAnot;pintarVisor();aviso(mostrarAnot?"Cajas visibles":"Cajas ocultas · toca el ojo para verlas");}
 function alternarEdicion(){editando=!editando;sel=-1;
   $("ver").classList.toggle("editando",editando);$("bed").classList.toggle("on",editando);pintarVisor();setTimeout(()=>aplicarVista(false),0);}
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
@@ -321,10 +327,12 @@ function cambiarZoom(){const vr=vista.getBoundingClientRect();
 vista.addEventListener("wheel",ev=>{ev.preventDefault();zoomEn(esc*Math.exp(-ev.deltaY*(ev.ctrlKey?.01:.002)),ev.clientX,ev.clientY,false);},{passive:false});
 window.addEventListener("resize",()=>{if($("ver").style.display=="flex")aplicarVista(false);});
 function dosDedos(){const[a,b]=[...dedos.values()];return{d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
-function iniciarPinza(){if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover"))cambio();
+function iniciarPinza(){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}if(gesto&&(gesto.tipo=="esq"||gesto.tipo=="mover"))cambio();
   const m=dosDedos();gesto={tipo:"pinza",d0:m.d,x0:m.x,y0:m.y,e0:esc,tx0:tx,ty0:ty};}
+let timerPeek=0;
 function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,tx0:tx,ty0:ty,t0:Date.now()};
-  if(!editando)return;
+  if(!editando){const g=gesto;clearTimeout(timerPeek);
+    timerPeek=setTimeout(()=>{if(gesto===g&&g.tipo=="pendiente"&&dedos.size==1){g.tipo="peek";ocultoTemp=true;pintarVisor();}},380);return;}
   const p=punto(ev),f=figsDe(DATOS[actual]),r=$("vi").getBoundingClientRect(),tol=22/r.width,tolY=22/r.height;
   if(sel>=0&&f[sel]){const[x1,y1,x2,y2]=caja(f[sel]);
     const esq=[[x1,y1],[x2,y1],[x2,y2],[x1,y2]].findIndex(([x,y])=>Math.abs(p[0]-x)<tol&&Math.abs(p[1]-y)<tolY);
@@ -345,7 +353,7 @@ vista.addEventListener("pointermove",ev=>{
     esc=Math.min(ZMAX,Math.max(.8,gesto.e0*m.d/gesto.d0));tx=m.x-ox-esc*cx;ty=m.y-oy-esc*cy;
     aplicarVista(false,esc<1);return;}
   const dx=ev.clientX-(gesto.x0??0),dy=ev.clientY-(gesto.y0??0);
-  if(gesto.tipo=="pendiente"&&Math.hypot(dx,dy)>8)gesto.tipo=esc>1.02?"pan":"deslizar";
+  if((gesto.tipo=="pendiente"||gesto.tipo=="peek")&&Math.hypot(dx,dy)>8){clearTimeout(timerPeek);if(ocultoTemp){ocultoTemp=false;pintarVisor();}gesto.tipo=esc>1.02?"pan":"deslizar";}
   if(gesto.tipo=="pan"){tx=gesto.tx0+dx;ty=gesto.ty0+dy;aplicarVista(false);return;}
   if(gesto.tipo=="deslizar"){if(!editando){lienzo.classList.remove("anim");lienzo.style.transform=`translate(${gesto.tx0+dx}px,${gesto.ty0}px)`;pintarCapa();}return;}
   if(gesto.tipo=="esq"||gesto.tipo=="mover"){
@@ -365,10 +373,11 @@ function toque(ev){
     if(esc>1.05)reiniciarZoom(true);else zoomEn(2.5,ev.clientX,ev.clientY,true);return;}
   ultimoToque={t:ahora,x:ev.clientX,y:ev.clientY};
   timerToque=setTimeout(()=>{ultimoToque=null;
-    if(editando){if(sel>=0){sel=-1;pintarVisor();}}else{mostrarAnot=!mostrarAnot;pintarVisor();}},280);
+    if(editando&&sel>=0){sel=-1;pintarVisor();}},280);
 }
 function soltarDedo(ev){
-  if(!dedos.has(ev.pointerId))return;dedos.delete(ev.pointerId);
+  if(!dedos.has(ev.pointerId))return;dedos.delete(ev.pointerId);clearTimeout(timerPeek);
+  if(ocultoTemp){ocultoTemp=false;pintarVisor();}
   const g=gesto;if(!g)return;
   if(g.tipo=="pinza"){
     if(dedos.size==1){const[id,d]=[...dedos.entries()][0];gesto={tipo:"pan",x0:d.x,y0:d.y,tx0:tx,ty0:ty};}

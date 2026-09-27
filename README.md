@@ -38,7 +38,8 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
 ## En el celular
 
 - **Empezar / Continuar** abre la primera foto pendiente. **Mal · Evaluar · Bien** la marca y pasa a la siguiente.
-- **Zoom:** pellizcar o doble toque. Con zoom, un dedo mueve la foto. Sin zoom, deslizar ← → cambia de foto. Un toque oculta o muestra las cajas.
+- **Zoom:** pellizcar o doble toque. Con zoom, un dedo mueve la foto. Sin zoom, deslizar ← → cambia de foto.
+- **Cajas:** el botón del ojo (arriba) las oculta o muestra; si está tachado en amarillo, están ocultas. Mantener el dedo sobre la foto las oculta solo mientras lo mantienes.
 - **✎ Editar cajas:**
   - tocar una caja la selecciona;
   - arrastrar una esquina cambia el tamaño; arrastrar el centro la mueve;
