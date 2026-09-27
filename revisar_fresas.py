@@ -166,6 +166,27 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 .estado .pend{color:var(--ev)}
 .enviar{flex:none;padding:6px 14px;border-radius:14px;background:var(--sup);color:var(--tx);font-size:13px;font-weight:600}
 .enviar.urg{background:var(--ev);color:#000}
+#envio{position:fixed;inset:0;z-index:10;background:#000a;display:none;align-items:center;justify-content:center;padding:16px}
+#envio.on{display:flex}
+.caja-env{width:100%;max-width:360px;background:var(--sup);border-radius:16px;padding:20px}
+.caja-env h3{margin:0 0 4px;font-size:17px;font-weight:600}
+.caja-env .sub{color:var(--mu);font-size:13px;min-height:18px}
+.barra{height:6px;background:var(--lin);border-radius:3px;overflow:hidden;margin:16px 0 18px}
+.barra i{display:block;height:100%;width:0;background:var(--ok);border-radius:3px;transition:width .5s ease}
+.barra.err i{background:var(--mal)}
+.pasos{list-style:none;margin:0;padding:0;font-size:14px}
+.pasos li{display:flex;gap:10px;align-items:flex-start;padding:7px 0}
+.pasos .ico{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--lin);color:var(--mu)}
+.pasos .si .ico{background:var(--ok);color:#000}.pasos .no .ico{background:var(--ev);color:#000}
+.pasos small{display:block;color:var(--mu);font-size:12px;margin-top:2px}
+.pasos code{font-size:11px;background:#0006;padding:1px 4px;border-radius:4px}
+.resumen{display:flex;gap:14px;font-size:13px;margin:10px 0 0;color:var(--mu)}
+.resumen b{color:var(--tx);font-weight:600}
+.caja-env .acciones{display:flex;gap:8px;margin-top:18px}
+.caja-env .acciones button{flex:1;padding:11px 0;border-radius:10px;background:var(--lin);font-weight:600}
+.caja-env .acciones .prim{background:var(--tx);color:#000}
+#guard{cursor:pointer}
+.ok-pc{color:var(--ok)}
 #toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-8px);background:#fff;color:#000;font-size:13px;font-weight:600;padding:6px 14px;border-radius:14px;opacity:0;transition:.2s;z-index:9;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1;transform:translate(-50%,0)}#toast.err{background:var(--mal)}
 .chipest{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--sup);color:var(--mu);white-space:nowrap}
@@ -175,9 +196,15 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 <header>
  <div class="top"><a class="ic" href="../index.html">‹</a><div class="t">__TITULO__</div><span id="cont" class="mu"></span><button class="ic" onclick="hoja(true)">⋯</button></div>
  <div class="prog"><i id="pok"></i><i id="pev"></i><i id="pmal"></i></div>
- <div class="estado"><span class="txt" id="guard"></span><button class="enviar" id="benv" onclick="enviar()">Enviar</button></div>
+ <div class="estado"><span class="txt" id="guard" onclick="verEstadoEnvio()"></span><button class="enviar" id="benv" onclick="enviar()">Enviar</button></div>
 </header>
 <div id="toast"></div>
+<div id="envio" onclick="if(event.target==this&&!enviando)cerrarEnvio()"><div class="caja-env">
+ <h3 id="etit">Enviar</h3><div class="sub" id="esub"></div>
+ <div class="barra" id="ebarra"><i id="ebar"></i></div>
+ <ul class="pasos" id="epasos"></ul><div class="resumen" id="eres"></div>
+ <div class="acciones" id="eacc"></div>
+</div></div>
 <main class="grid" id="g"></main>
 <button class="fab" id="fab" onclick="seguir()">Revisar</button>
 <div id="hoja" onclick="if(event.target==this)hoja(false)"><div class="panel">
@@ -203,7 +230,11 @@ const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
 let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
-let enviado={marcas:{},ediciones:{},t:0};
+let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
+fetch("../aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
+/* estado de la confirmación desde la PC para el último envío */
+function estadoPC(){const a=aplicados[LOTE];if(!enviado.fecha)return a?"antiguo":"";
+  if(a&&a.envio_fecha===enviado.fecha)return "si";return a&&a.envio_fecha>enviado.fecha?"si":"no";}
 try{enviado=JSON.parse(localStorage.getItem(CLAVE+"_env")||"null")||enviado}catch(e){}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 let timerToast=0;
@@ -223,7 +254,9 @@ function hace(t){const m=Math.round((Date.now()-t)/60000);return m<1?"hace un mo
 function pintarEstado(){
   const h=Object.keys(marcas).length,e=Object.keys(ediciones).length,p=sinEnviar();
   let t=h||e?`<b>✓ ${h} guardada${h==1?"":"s"}</b>${e?` · ${e} ✎`:""}`:"Se guarda solo en este celular";
-  if(p)t+=` · <span class="pend">${p} sin enviar</span>`;else if(enviado.t)t+=` · enviado ${hace(enviado.t)}`;
+  const pc=estadoPC();
+  if(p)t+=` · <span class="pend">${p} sin enviar</span>`;
+  else if(enviado.t)t+=pc=="si"?` · <span class="ok-pc">✓ aplicado en PC</span>`:` · enviado ${hace(enviado.t)}`;
   $("guard").innerHTML=t;$("benv").style.display=h||e?"":"none";$("benv").classList.toggle("urg",p>=20);
   $("ned").textContent=p?p+" sin enviar":enviado.t?"todo enviado":"";}
 function guardarPref(){try{localStorage.setItem("fresas_mini",mini?"1":"0")}catch(e){}}
@@ -390,20 +423,59 @@ function soltarDedo(ev){
   if(g.tipo=="pendiente"&&ev.type=="pointerup")toque(ev);
 }
 vista.addEventListener("pointerup",soltarDedo);vista.addEventListener("pointercancel",soltarDedo);
-function bajar(nombre,contenido,tipo,listo){
+function descargarArchivo(archivo){const a=document.createElement("a");a.href=URL.createObjectURL(archivo);a.download=archivo.name;a.click();}
+/* listo(modo) con modo "compartido" o "descargado"; cancelado() si la persona cierra el menú de compartir */
+function bajar(nombre,contenido,tipo,listo,cancelado){
   const archivo=new File([contenido],nombre,{type:tipo});
-  if(navigator.canShare&&navigator.canShare({files:[archivo]})){navigator.share({files:[archivo],title:nombre}).then(()=>listo&&listo()).catch(()=>{});return;}
-  const a=document.createElement("a");a.href=URL.createObjectURL(archivo);a.download=nombre;a.click();listo&&listo();
+  if(navigator.canShare&&navigator.canShare({files:[archivo]})){
+    navigator.share({files:[archivo],title:nombre}).then(()=>listo&&listo("compartido"))
+      .catch(e=>{if(e&&e.name=="AbortError"){cancelado&&cancelado();}else{descargarArchivo(archivo);listo&&listo("descargado");}});
+    return;}
+  descargarArchivo(archivo);listo&&listo("descargado");
 }
+function resumenDe(m,ed){const v=Object.values(m);
+  return{fotos:v.length,bien:v.filter(x=>x=="bien"||x=="ok").length,mal:v.filter(x=>x=="mal").length,
+         evaluar:v.filter(x=>x=="evaluar"||x=="ev").length,cajas:Object.keys(ed).length};}
+function htmlResumen(r){return `<span><b>${r.fotos}</b> fotos</span><span><b>${r.bien}</b> bien</span><span><b>${r.mal}</b> mal</span><span><b>${r.evaluar}</b> evaluar</span>${r.cajas?`<span><b>${r.cajas}</b> ✎</span>`:""}`;}
+function paso(estado,titulo,detalle){return `<li class="${estado}"><span class="ico">${estado=="si"?"✓":estado=="no"?"!":"·"}</span><span>${titulo}${detalle?`<small>${detalle}</small>`:""}</span></li>`;}
+function pasosEnvio(){
+  const h=Object.keys(marcas).length+Object.keys(ediciones).length,p=sinEnviar(),pc=estadoPC(),a=aplicados[LOTE];
+  return paso(h?"si":"","Guardado en este celular",h?`${Object.keys(marcas).length} fotos marcadas`:"")+
+    paso(!enviado.t?"":p?"no":"si","Enviado",!enviado.t?"Todavía no se ha enviado":p?`${p} cambios nuevos sin enviar · último envío ${hace(enviado.t)}`:`${hace(enviado.t)} · revision_${LOTE}.json`)+
+    paso(pc=="si"?"si":enviado.t?"no":"","Aplicado en la PC",pc=="si"?`${a.fotos} fotos${a.cajas?`, ${a.cajas} con cajas corregidas`:""} · ${new Date(a.aplicado_fecha).toLocaleString()}`:
+      enviado.t?`En la PC: <code>--aplicar revision_${LOTE}.json</code> y luego <code>git push</code>`:"");
+}
+function abrirEnvio(tit,sub,pct,err){$("envio").classList.add("on");$("etit").textContent=tit;$("esub").textContent=sub;
+  $("ebarra").classList.toggle("err",!!err);$("ebar").style.width=pct+"%";}
+function cerrarEnvio(){$("envio").classList.remove("on");}
+function verEstadoEnvio(){if(!Object.keys(marcas).length&&!Object.keys(ediciones).length)return;
+  const pc=estadoPC(),p=sinEnviar();
+  abrirEnvio("Estado del envío",p?"Hay cambios sin enviar":pc=="si"?"Todo está aplicado en la PC":"",p?33:pc=="si"?100:66);
+  $("epasos").innerHTML=pasosEnvio();$("eres").innerHTML=enviado.resumen?htmlResumen(enviado.resumen):"";
+  $("eacc").innerHTML=(p?`<button class="prim" onclick="enviar()">Enviar ahora</button>`:"")+`<button onclick="cerrarEnvio()">Cerrar</button>`;}
 function enviar(){
   if(!Object.keys(marcas).length&&!Object.keys(ediciones).length){aviso("Todavía no hay nada que enviar");return;}
+  if(enviando)return;enviando=true;hoja(false);
   const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
   const originales={};DATOS.forEach(d=>{if(d.orig in ediciones)originales[d.orig]=d.figs;});
-  const datos={formato:2,lote:LOTE,fecha:new Date().toISOString(),marcas:m,correcciones:ediciones,originales};
-  bajar(`revision_${LOTE}.json`,JSON.stringify(datos,null,1),"application/json",()=>{
-    enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),t:Date.now()};
-    try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}
-    hoja(false);pintar();aviso("✓ Archivo listo: revision_"+LOTE+".json");});
+  const fecha=new Date().toISOString(),res=resumenDe(m,ediciones);
+  const datos={formato:2,lote:LOTE,fecha,marcas:m,correcciones:ediciones,originales};
+  $("epasos").innerHTML="";$("eacc").innerHTML="";$("eres").innerHTML=htmlResumen(res);
+  abrirEnvio("Enviando…","Preparando el archivo",8);
+  setTimeout(()=>{abrirEnvio("Enviando…","Elige dónde enviarlo (WhatsApp, correo, Drive…)",45);
+    const contenido=JSON.stringify(datos,null,1);
+    bajar(`revision_${LOTE}.json`,contenido,"application/json",modo=>{
+      enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),t:Date.now(),fecha,resumen:res};
+      let ok=true;try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){ok=false}
+      enviando=false;pintar();
+      abrirEnvio("✓ Enviado",modo=="descargado"?`Se descargó revision_${LOTE}.json (${Math.ceil(contenido.length/1024)} KB). Pásalo a la PC.`
+        :`revision_${LOTE}.json (${Math.ceil(contenido.length/1024)} KB) compartido.`,66);
+      $("epasos").innerHTML=pasosEnvio();
+      $("eacc").innerHTML=`<button class="prim" onclick="cerrarEnvio()">Listo</button>`;
+      if(!ok)aviso("⚠ Se envió, pero no se pudo guardar el registro del envío",true);
+    },()=>{enviando=false;abrirEnvio("Envío cancelado","No se envió nada. Tus marcas siguen guardadas en el celular.",100,true);
+      $("epasos").innerHTML="";$("eacc").innerHTML=`<button class="prim" onclick="enviar()">Reintentar</button><button onclick="cerrarEnvio()">Cerrar</button>`;});
+  },450);
 }
 function descargar(){
   const filas=["archivo,estado,editada"].concat(DATOS.map(d=>`"${d.orig}",${{ok:"bien",mal:"mal",ev:"evaluar"}[marcas[d.orig]]||"sin_revisar"},${d.orig in ediciones?"si":"no"}`));
@@ -454,17 +526,22 @@ h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-
 .bar{flex:1;height:4px;background:#2a2a2e;border-radius:2px;display:flex;overflow:hidden}
 .bar i{display:block;height:100%}
 .n{color:#8a8a90;font-size:13px;width:74px;text-align:right;line-height:1.25}
-.n em{font-style:normal;color:#ffd60a;font-size:11px}
+.n em{font-style:normal;color:#ffd60a;font-size:11px}.n em.pc{color:#34c759}
 p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
 <script>
-const LOTES=__LOTES__;
+const LOTES=__LOTES__;let APL={};
+function pintarIndice(){
 let grupo=null;
 document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!==grupo&&LOTES.some(x=>x[3]!==g)?`<h2>${g=="lote"?"En orden":g.replace(/_/g," ")}</h2>`:"";grupo=g;let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
   const pend=JSON.stringify(m)!==JSON.stringify(env.marcas||{})||JSON.stringify(ed)!==JSON.stringify(env.ediciones||{});
+  const a=APL[n],enPC=!pend&&env.fecha&&a&&a.envio_fecha>=env.fecha;
   const v=Object.values(m),ok=v.filter(x=>x=="ok").length,mal=v.filter(x=>x=="mal").length,ev=v.filter(x=>x=="ev").length;
-  return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':""}</span></a>`}).join("");
+  return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':enPC?'<br><em class="pc">✓ en PC</em>':env.fecha?'<br><em>falta aplicar</em>':""}</span></a>`}).join("");
+}
+pintarIndice();
+fetch("aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
 </script></body></html>
 """
 
@@ -655,7 +732,7 @@ def exportar_yolo(j, d, origen):
     return True
 
 
-def aplicar_correcciones(origen, archivo):
+def aplicar_correcciones(origen, archivo, salida=Path("revision")):
     """Escribe en las anotaciones originales lo revisado desde el celular."""
     datos = json.loads(Path(archivo).read_text(encoding="utf-8"))
     correcciones = datos.get("correcciones", {} if "marcas" in datos else datos)
@@ -721,6 +798,27 @@ def aplicar_correcciones(origen, archivo):
         n = sum(len(m["recalcular"]) for m in mapas.values())
         print(f"{destino}: {len(mapas)} imágenes con cajas movidas, nuevas o borradas "
               f"({n} cajas sin métricas: hay que recalcular sus atributos)")
+    registrar_aplicado(salida, lote, datos, hechas)
+
+
+def registrar_aplicado(salida, lote, datos, cajas):
+    """Anota en revision/aplicados.json que este envío ya se aplicó; la página lo muestra
+    como «✓ Aplicado en PC» después del git push."""
+    if not salida.is_dir():
+        return
+    ruta = salida / "aplicados.json"
+    try:
+        registro = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        registro = {}
+    marcas = list(datos.get("marcas", {}).values())
+    registro[lote] = {"envio_fecha": datos.get("fecha", ""),
+                      "aplicado_fecha": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+                      "fotos": len(marcas), "bien": marcas.count("bien"), "mal": marcas.count("mal"),
+                      "evaluar": marcas.count("evaluar"), "cajas": cajas}
+    ruta.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"Confirmación guardada en {ruta}. Súbela para verla en el celular:\n"
+          f'    git add -A; git commit -m "Aplicado {lote}"; git push')
 
 
 def respaldo(archivo):
@@ -751,7 +849,7 @@ def main():
     if a.raiz is None or not a.raiz.is_dir():
         sys.exit(f"No existe: {a.raiz}")
     if a.aplicar:
-        aplicar_correcciones(a.raiz / (a.carpeta or "."), a.aplicar)
+        aplicar_correcciones(a.raiz / (a.carpeta or "."), a.aplicar, a.salida)
     elif a.carpeta is None:
         listar_carpetas(a.raiz)
     else:
