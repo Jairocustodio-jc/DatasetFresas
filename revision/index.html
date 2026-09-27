@@ -16,7 +16,7 @@ p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
 <script>
-const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"], ["lote_04", 300, "Lote 4", "lote"], ["lote_05", 300, "Lote 5", "lote"], ["lote_06", 300, "Lote 6", "lote"]];
+const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"], ["lote_04", 300, "Lote 4", "lote"], ["lote_05", 300, "Lote 5", "lote"], ["lote_06", 300, "Lote 6", "lote"], ["lote_07", 300, "Lote 7", "lote"]];
 let grupo=null;
 document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!==grupo&&LOTES.some(x=>x[3]!==g)?`<h2>${g=="lote"?"En orden":g.replace(/_/g," ")}</h2>`:"";grupo=g;let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
   const pend=JSON.stringify(m)!==JSON.stringify(env.marcas||{})||JSON.stringify(ed)!==JSON.stringify(env.ediciones||{});
