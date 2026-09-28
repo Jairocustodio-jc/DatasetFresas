@@ -224,6 +224,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div>__NAVEGACION__
+ <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: __VERSION__</div>
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
@@ -543,6 +544,7 @@ def escribir_html(dir_lote, nombres, i, datos):
     titulo = titulo_de(nombre)
     pagina = (PLANTILLA.replace("__TITULO__", html.escape(titulo))
               .replace("__NAVEGACION__", nav).replace("__LOTE__", json.dumps(nombre))
+              .replace("__VERSION__", datetime.datetime.now().astimezone().strftime("%d/%m %H:%M"))
               .replace("__DATOS__", json.dumps(datos, ensure_ascii=False)))
     (dir_lote / "index.html").write_text(pagina, encoding="utf-8")
 
@@ -564,6 +566,7 @@ h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-
 p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
+<p style="font-size:11px">Versión de la página: __VERSION__</p>
 <script>
 const LOTES=__LOTES__;let APL={};
 function pintarIndice(){
@@ -604,7 +607,8 @@ def rehacer_html(salida):
                     f.setdefault("i", k)
             escribir_html(d, nombres, i, datos)
             lotes.append([d.name, len(datos), titulo_de(d.name), g])
-    (salida / "index.html").write_text(INDICE.replace("__LOTES__", json.dumps(lotes, ensure_ascii=False)),
+    (salida / "index.html").write_text(INDICE.replace("__LOTES__", json.dumps(lotes, ensure_ascii=False))
+                                       .replace("__VERSION__", datetime.datetime.now().astimezone().strftime("%d/%m %H:%M")),
                                        encoding="utf-8")
     print(f"Páginas actualizadas: {', '.join(l[0] for l in lotes)}")
 
