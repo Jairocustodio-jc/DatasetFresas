@@ -14,6 +14,11 @@
   `unripe`, 8 `commercial-high` anaranjadas marcadas como `overripe`) y 17 faltantes (flores, hojas, piedras). Quedan 87 + 12.
   Patrón: YOLO confunde `early-pink` con rubor leve y `unripe`; esas sugerencias casi siempre están mal.
 - La página avisa además «¿duplicada?» cuando dos cajas se superponen ≥ 80 % (38 casos en los lotes 1–10).
+- `yolo_fresas_lote01_02.pt`: reentrenado desde el anterior con los lotes 1 y 2 revisados (513 fotos de entrenamiento,
+  30 épocas). Con la revisión del lote 2: se aceptaron 54 de 102 sugerencias y 10 de 15 faltantes. En validación (80 fotos) rinde
+  parecido al anterior (45 % vs 42 % de sugerencias correctas), pero **aprendió el criterio de la persona**: en el lote 4 bajó
+  de 21 a 8 las sugerencias `early-pink → unripe` (su error típico) y subió de 18 a 28 `commercial-basic → early-pink`
+  (la corrección humana más común). Con él se regeneraron las sugerencias de los lotes 3 y 4, otra vez filtradas a mano.
 - `scripts/`: preparar el dataset desde la revisión (`preparar.py`), entrenar (`entrenar.py`), validar contra la revisión
   (`validar.py`) y escribir las sugerencias en un lote (`inyectar.py modelo lote umbral_estado umbral_faltantes`).
   Son scripts de trabajo con rutas del entorno donde se entrenó; hay que ajustar las rutas para usarlos en otra máquina.
