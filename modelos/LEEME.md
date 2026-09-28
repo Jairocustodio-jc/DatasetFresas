@@ -7,6 +7,9 @@
   6 de cada 11 errores de la etiqueta automática. **No se aplica solo**: se muestra como sugerencia en la página.
 - Lote 2: 110 sugerencias de estado + 22 cajas faltantes; tras revisión visual se quitaron 7 (fresas con rubor rosado
   marcadas como `unripe`) y 7 faltantes que eran flores u hojas. Quedan 103 + 15 en 94 fotos.
+- Lote 3 (mismo modelo): 114 sugerencias de estado + 23 faltantes; tras revisión visual se quitaron 12 sugerencias
+  (7 `early-pink` con rubor marcadas como `unripe`, 5 `commercial-high` anaranjadas o con zonas pálidas marcadas como `overripe`)
+  y 10 faltantes (flores, hojas, centros de flor). Quedan 102 + 13.
 - `scripts/`: preparar el dataset desde la revisión (`preparar.py`), entrenar (`entrenar.py`), validar contra la revisión
   (`validar.py`) y escribir las sugerencias en un lote (`inyectar.py modelo lote umbral_estado umbral_faltantes`).
   Son scripts de trabajo con rutas del entorno donde se entrenó; hay que ajustar las rutas para usarlos en otra máquina.
