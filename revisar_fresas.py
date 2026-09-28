@@ -242,7 +242,7 @@ const CLAVE="fresas_"+LOTE;
 let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
-fetch("../aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
+fetch("../aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
 /* estado de la confirmación desde la PC para el último envío */
 function estadoPC(){const a=aplicados[LOTE];if(!enviado.fecha)return a?"antiguo":"";
   if(a&&a.envio_fecha===enviado.fecha)return "si";return a&&a.envio_fecha>enviado.fecha?"si":"no";}
@@ -578,7 +578,7 @@ document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!
   return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':enPC?'<br><em class="pc">✓ en PC</em>':env.fecha?'<br><em>falta aplicar</em>':""}</span></a>`}).join("");
 }
 pintarIndice();
-fetch("aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
+fetch("aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
 </script></body></html>
 """
 

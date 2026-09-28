@@ -125,7 +125,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div><a class="fila" href="../lote_02/index.html"><span>Lote 2 ›</span></a><a class="fila" href="../index.html"><span>Todos los lotes</span></a>
- <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 27/09 19:10</div>
+ <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 27/09 19:21</div>
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
@@ -143,7 +143,7 @@ const CLAVE="fresas_"+LOTE;
 let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
-fetch("../aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
+fetch("../aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
 /* estado de la confirmación desde la PC para el último envío */
 function estadoPC(){const a=aplicados[LOTE];if(!enviado.fecha)return a?"antiguo":"";
   if(a&&a.envio_fecha===enviado.fecha)return "si";return a&&a.envio_fecha>enviado.fecha?"si":"no";}

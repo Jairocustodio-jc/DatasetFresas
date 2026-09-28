@@ -15,7 +15,7 @@ h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-
 p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
-<p style="font-size:11px">Versión de la página: 27/09 19:10</p>
+<p style="font-size:11px">Versión de la página: 27/09 19:21</p>
 <script>
 const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"], ["lote_04", 300, "Lote 4", "lote"], ["lote_05", 300, "Lote 5", "lote"], ["lote_06", 300, "Lote 6", "lote"], ["lote_07", 300, "Lote 7", "lote"], ["lote_08", 300, "Lote 8", "lote"], ["lote_09", 300, "Lote 9", "lote"], ["lote_10", 300, "Lote 10", "lote"]];let APL={};
 function pintarIndice(){
@@ -27,5 +27,5 @@ document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!
   return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':enPC?'<br><em class="pc">✓ en PC</em>':env.fecha?'<br><em>falta aplicar</em>':""}</span></a>`}).join("");
 }
 pintarIndice();
-fetch("aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
+fetch("aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
 </script></body></html>
