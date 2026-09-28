@@ -879,6 +879,22 @@ def fusionar_json(d, figs, originales):
         figs = asignar_indices(figs, originales)
     orig_por_i = {f.get("i", k): f for k, f in enumerate(originales)} if originales is not None else None
     nuevas, mapa, recalcular = [], {k: None for k in range(len(previas))}, []
+    if orig_por_i is not None:
+        # una caja «nueva» que ya está en el JSON (p. ej. al aplicar dos veces el mismo envío) se reconoce
+        # por su posición y conserva sus metadatos en vez de borrarse y volver a crearse
+        usados = {f.get("i") for f in figs if f.get("i") is not None}
+        sobrantes = [k for k in range(len(previas)) if k not in usados and k not in orig_por_i
+                     and len(previas[k].get("points", [])) >= 2]
+        figs = [dict(f) for f in figs]
+        for f in figs:
+            if f.get("i") is not None or not sobrantes:
+                continue
+            def norm(sh):
+                return [[x / w, y / h] for x, y in sh["points"]]
+            k = max(sobrantes, key=lambda k: iou(f["pts"], norm(previas[k])))
+            if iou(f["pts"], norm(previas[k])) >= 0.9:
+                f["i"] = k
+                sobrantes.remove(k)
     for k, f in enumerate(figs):
         i = f.get("i") if orig_por_i is not None else (k if k < len(previas) else None)
         x1, y1, x2, y2 = a_caja(f["pts"])
