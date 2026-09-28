@@ -239,7 +239,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
+let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},rechazadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
 fetch("../aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
@@ -251,9 +251,9 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
 let timerToast=0;
 function aviso(txt,err){const t=$("toast");t.textContent=txt;t.classList.toggle("err",!!err);t.classList.add("on");
   clearTimeout(timerToast);timerToast=setTimeout(()=>t.classList.remove("on"),err?4000:1300);}
-try{descartadas=JSON.parse(localStorage.getItem(CLAVE+"_desc")||"{}")}catch(e){}
+try{descartadas=JSON.parse(localStorage.getItem(CLAVE+"_desc")||"{}");rechazadas=JSON.parse(localStorage.getItem(CLAVE+"_rech")||"{}")}catch(e){}
 function guardar(txt){
-  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));
+  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));localStorage.setItem(CLAVE+"_rech",JSON.stringify(rechazadas));
     if(localStorage.getItem(CLAVE)!==JSON.stringify(marcas))throw 0;
     if(txt)aviso(txt);return true;}
   catch(e){aviso("⚠ No se pudo guardar. ¿Modo incógnito?",true);return false;}
@@ -277,10 +277,14 @@ const EXTRA=["#64d2ff","#ffd60a","#0a84ff","#ffffff"];
 function color(l){if(!(l in COLORES))COLORES[l]=EXTRA[Object.keys(COLORES).length%EXTRA.length];return COLORES[l];}
 DATOS.forEach(d=>d.figs.forEach(f=>color(f.label)));
 const $=id=>document.getElementById(id);
-function figsDe(d){return ediciones[d.orig]||d.figs;}
+/* cada caja sabe de qué foto es (propiedad no enumerable: no se exporta) */
+function marcarFoto(figs,orig){figs.forEach(f=>{if(f._o!==orig)Object.defineProperty(f,"_o",{value:orig,writable:true,configurable:true,enumerable:false});});return figs;}
+function figsDe(d){return marcarFoto(ediciones[d.orig]||d.figs,d.orig);}
 function caja(f){const xs=f.pts.map(p=>p[0]),ys=f.pts.map(p=>p[1]);return[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];}
 function deCaja(label,[x1,y1,x2,y2]){return{label,pts:[[x1,y1],[x2,y1],[x2,y2],[x1,y2]]};}
-function sugDe(f){return f.sug&&f.sug!==f.label?f.sug:null;}
+function sugDe(f){if(!f.sug||f.sug===f.label)return null;
+  if(f._o&&(rechazadas[f._o]||[]).includes(f.i))return null;   // la persona decidió mantener su etiqueta
+  return f.sug;}
 /* cajas que el modelo ve y no están anotadas; desaparecen al aceptarlas o descartarlas */
 function faltan(d){const ya=figsDe(d);return(d.falta||[]).filter((p,k)=>!(descartadas[d.orig]||[]).includes(k)&&!ya.some(f=>iouN(caja(f),caja(p))>=0.5));}
 function iouN(a,b){const ix=Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])),iy=Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1])),I=ix*iy;
@@ -308,6 +312,7 @@ function etqFaltan(d){const r=$("vi").getBoundingClientRect(),v=document.querySe
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
+DATOS.forEach(d=>marcarFoto(d.figs,d.orig));
 const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe)||(d.falta||[]).length);
 const FILTROS=HAY_SUG?{todas:"Todas",sug:"Con sugerencia",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"}:{todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
 function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe)||faltan(d).length>0:filtro=="pend"?!m:m==filtro);}
@@ -356,7 +361,12 @@ function alternarEdicion(){editando=!editando;sel=-1;
   $("ver").classList.toggle("editando",editando);$("bed").classList.toggle("on",editando);pintarVisor();setTimeout(()=>aplicarVista(false),0);}
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
 function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar("✓ Cajas guardadas");pintarVisor();}
-function ponerEtiqueta(l){etiquetaNueva=l;if(sel>=0){editables()[sel].label=l;cambio();}else pintarChips();}
+function ponerEtiqueta(l){etiquetaNueva=l;if(sel<0){pintarChips();return;}
+  const d=DATOS[actual],actualF=figsDe(d)[sel],sg=sugDe(actualF);
+  if(sg&&l!==sg&&actualF.i!==undefined){            // eligió otra cosa que la sugerida: la sugerencia se descarta
+    const r=rechazadas[d.orig]=rechazadas[d.orig]||[];if(!r.includes(actualF.i))r.push(actualF.i);}
+  if(l===actualF.label){guardar(sg?`Se mantiene ${l}`:"");pintarVisor();return;}
+  editables()[sel].label=l;cambio();}
 function decidirFaltante(fal){
   const d=DATOS[actual],k=d.falta.indexOf(fal);
   if(confirm(`¿Agregar esta caja como «${fal.label}»?\n\nAceptar = agregar · Cancelar = descartar la sugerencia`)){
