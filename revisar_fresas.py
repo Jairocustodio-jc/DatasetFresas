@@ -591,7 +591,9 @@ function sincronizar(forzar){if(!nubeActiva())return Promise.resolve(false);if(s
     try{await asegurarRama();
       for(let intento=0;intento<3;intento++){
         const x=await leerNube(LOTE+".json");nube.sha=x?x.sha:undefined;
-        if(x&&fusionarRevision(x.datos,false)){guardarLocal();pintar();}
+        const recibidos=x?fusionarRevision(x.datos,false):0;
+        if(recibidos){guardarLocal();pintar();if(actual>=0&&$("ver").style.display=="flex")pintarVisor();
+          aviso(`☁ ${recibidos} cambio${recibidos==1?"":"s"} de otro dispositivo`);}
         const d=datosActuales();
         if(!forzar&&x&&JSON.stringify({m:x.datos.marcas,c:x.datos.correcciones})===JSON.stringify({m:d.marcas,c:d.correcciones})){registrarEnvioNube(d);break;}
         const r=await api(`/contents/${encodeURIComponent(LOTE+".json")}`,{method:"PUT",body:JSON.stringify({
@@ -640,6 +642,9 @@ function desconectarGitHub(){if(!confirm("¿Desconectar este dispositivo de GitH
   nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}cerrarEnvio();pintarEstado();aviso("Desconectado de GitHub");}
 window.addEventListener("online",()=>{if(nube.estado=="error")sincronizar();});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")programarSubida(300);else if(nubeActiva()&&sinEnviar())sincronizar();});
+window.addEventListener("focus",()=>programarSubida(300));
+/* mientras la página está abierta, consulta GitHub cada 30 s para traer lo del otro dispositivo */
+setInterval(()=>{if(nubeActiva()&&document.visibilityState=="visible"&&!subiendo)sincronizar();},30000);
 if(nubeActiva())programarSubida(200);
 function importar(input){
   const f=input.files&&input.files[0];input.value="";if(!f)return;
@@ -703,7 +708,7 @@ h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-
 .n em{font-style:normal;color:#ffd60a;font-size:11px}.n em.pc{color:#34c759}
 p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
-<p>Lo que revisas se guarda solo en este celular y en este navegador. Usa «Enviar» en cada lote para pasarlo a la PC.</p>
+<p id="sync">Lo que revisas se guarda en este dispositivo. Para verlo también en otro, activa en un lote: ⋯ → Sincronizar con GitHub.</p>
 <p style="font-size:11px">Versión de la página: __VERSION__</p>
 <script>
 const LOTES=__LOTES__;let APL={};
@@ -716,6 +721,38 @@ document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!
   return cab+`<a href="${n}/index.html"><b>${titulo}</b><span class="bar"><i style="width:${ok/t*100}%;background:#34c759"></i><i style="width:${ev/t*100}%;background:#ffd60a"></i><i style="width:${mal/t*100}%;background:#ff453a"></i></span><span class="n">${ok+mal+ev==t?"✓":ok+mal+ev+"/"+t}${pend?'<br><em>sin enviar</em>':enPC?'<br><em class="pc">✓ en PC</em>':env.fecha?'<br><em>falta aplicar</em>':""}</span></a>`}).join("");
 }
 pintarIndice();
+/* con la sincronización activada, el índice trae de GitHub la revisión de TODOS los lotes
+   (así el avance incluye lo hecho en otro dispositivo). Por foto gana el cambio más reciente. */
+function leerLS(k,def){try{return JSON.parse(localStorage.getItem(k)||"null")||def}catch(e){return def}}
+function fusionarLS(n,r){
+  const K="fresas_"+n,m=leerLS(K,{}),ed=leerLS(K+"_ed",{}),t=leerLS(K+"_t",{}),env=leerLS(K+"_env",{marcas:{},ediciones:{},t:0}),
+        rech=leerLS(K+"_rech",{}),desc=leerLS(K+"_desc",{});
+  env.marcas=env.marcas||{};env.ediciones=env.ediciones||{};
+  const inv={bien:"ok",mal:"mal",evaluar:"ev"},rt=r.tiempos||{},base=Date.parse(r.fecha)||0;let c=0;
+  for(const o of new Set([...Object.keys(r.marcas||{}),...Object.keys(r.correcciones||{})])){
+    const tr=rt[o]||base;if(tr<=(t[o]||0))continue;
+    const mk=r.marcas&&inv[r.marcas[o]];if(mk&&m[o]!==mk){m[o]=mk;c++;}
+    if(r.correcciones&&o in r.correcciones&&JSON.stringify(ed[o])!==JSON.stringify(r.correcciones[o])){ed[o]=r.correcciones[o];c++;}
+    t[o]=tr;if(m[o])env.marcas[o]=m[o];if(o in ed)env.ediciones[o]=ed[o];}
+  for(const[o,l]of Object.entries(r.rechazadas||{})){const a=rech[o]=rech[o]||[];l.forEach(i=>a.includes(i)||a.push(i));}
+  for(const[o,l]of Object.entries(r.descartadas||{})){const a=desc[o]=desc[o]||[];l.forEach(i=>a.includes(i)||a.push(i));}
+  try{localStorage.setItem(K,JSON.stringify(m));localStorage.setItem(K+"_ed",JSON.stringify(ed));localStorage.setItem(K+"_t",JSON.stringify(t));
+    localStorage.setItem(K+"_env",JSON.stringify(env));localStorage.setItem(K+"_rech",JSON.stringify(rech));localStorage.setItem(K+"_desc",JSON.stringify(desc));}catch(e){}
+  return c;}
+async function syncIndice(){
+  let tok="";try{tok=localStorage.getItem("fresas_token")||""}catch(e){}
+  const h=location.hostname.match(/^([^.]+)\.github\.io$/i),seg=location.pathname.split("/").filter(Boolean);
+  if(!tok||!h||!seg.length)return;
+  const s=document.getElementById("sync");s.textContent="☁ Sincronizando con GitHub…";let total=0,err="";
+  await Promise.all(LOTES.map(async([n])=>{try{
+    const r=await fetch(`https://api.github.com/repos/${h[1]}/${seg[0]}/contents/${encodeURIComponent(n)}.json?ref=resultados`,
+      {cache:"no-store",headers:{Authorization:"Bearer "+tok,Accept:"application/vnd.github.raw+json"}});
+    if(r.status==404)return;if(!r.ok){err="GitHub respondió "+r.status;return;}
+    total+=fusionarLS(n,await r.json());}catch(e){err="sin conexión";}}));
+  pintarIndice();
+  s.textContent=err?`⚠ No se pudo sincronizar (${err}).`:`☁ Sincronizado con GitHub${total?` · ${total} cambios recibidos de otros dispositivos`:" · todo al día"}. Lo que revisaste en un lote antes de conectarlo se sube al abrir ese lote.`;}
+syncIndice();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")syncIndice();});
 fetch("aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{APL=j||{};pintarIndice();}).catch(()=>{});
 </script></body></html>
 """

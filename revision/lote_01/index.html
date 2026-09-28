@@ -128,7 +128,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <input type="file" id="fimport" accept=".json,application/json" style="display:none" onchange="importar(this)">
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div><a class="fila" href="../lote_02/index.html"><span>Lote 2 ›</span></a><a class="fila" href="../index.html"><span>Todos los lotes</span></a>
- <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 28/09 10:06</div>
+ <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 28/09 10:15</div>
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
@@ -492,7 +492,9 @@ function sincronizar(forzar){if(!nubeActiva())return Promise.resolve(false);if(s
     try{await asegurarRama();
       for(let intento=0;intento<3;intento++){
         const x=await leerNube(LOTE+".json");nube.sha=x?x.sha:undefined;
-        if(x&&fusionarRevision(x.datos,false)){guardarLocal();pintar();}
+        const recibidos=x?fusionarRevision(x.datos,false):0;
+        if(recibidos){guardarLocal();pintar();if(actual>=0&&$("ver").style.display=="flex")pintarVisor();
+          aviso(`☁ ${recibidos} cambio${recibidos==1?"":"s"} de otro dispositivo`);}
         const d=datosActuales();
         if(!forzar&&x&&JSON.stringify({m:x.datos.marcas,c:x.datos.correcciones})===JSON.stringify({m:d.marcas,c:d.correcciones})){registrarEnvioNube(d);break;}
         const r=await api(`/contents/${encodeURIComponent(LOTE+".json")}`,{method:"PUT",body:JSON.stringify({
@@ -541,6 +543,9 @@ function desconectarGitHub(){if(!confirm("¿Desconectar este dispositivo de GitH
   nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}cerrarEnvio();pintarEstado();aviso("Desconectado de GitHub");}
 window.addEventListener("online",()=>{if(nube.estado=="error")sincronizar();});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")programarSubida(300);else if(nubeActiva()&&sinEnviar())sincronizar();});
+window.addEventListener("focus",()=>programarSubida(300));
+/* mientras la página está abierta, consulta GitHub cada 30 s para traer lo del otro dispositivo */
+setInterval(()=>{if(nubeActiva()&&document.visibilityState=="visible"&&!subiendo)sincronizar();},30000);
 if(nubeActiva())programarSubida(200);
 function importar(input){
   const f=input.files&&input.files[0];input.value="";if(!f)return;
