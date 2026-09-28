@@ -49,6 +49,9 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
   - **＋** crea una caja nueva, **⌫** borra la seleccionada y **↺** vuelve a las cajas originales.
 - **Menú ⋯:** leyenda, filtro **Mostrar** (Todas / A evaluar / Mal / Bien / Sin revisar), Enviar, CSV y cambio de lote.
 - **Guardado:** todo se guarda al instante **en ese navegador de ese celular** («✓ Guardado»). Arriba del lote se ve cuántas fotos faltan enviar.
+- **Varios dispositivos (celular y laptop):**
+  - al abrir un lote, la página **carga sola** lo que ya se aplicó en la PC y se subió con `git push` (`feedback/revision_<lote>.json`);
+  - menú **⋯ → Importar revisión**: carga el archivo que enviaste desde el otro dispositivo. Si una foto se revisó en los dos, gana el cambio más reciente.
 - **Enviar** genera `revision_<lote>.json`, que compartes a la PC por WhatsApp, correo o Drive. Conviene enviar seguido: si se borran los datos del navegador, lo no enviado se pierde.
 - **Barra y confirmación:** Enviar muestra una barra de progreso y el resultado (enviado, descargado o cancelado). Tocar la línea de estado del lote abre los 3 pasos: *Guardado en el celular → Enviado → Aplicado en la PC*. El tercero se marca ✓ cuando en la PC corres `--aplicar` y subes `revision/aplicados.json` con `git push`. En el índice aparece «✓ en PC» o «falta aplicar».
 

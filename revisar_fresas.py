@@ -222,6 +222,8 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <button class="fila" onclick="mini=!mini;guardarPref();pintar();hoja(true)"><span>Cajas en miniaturas</span><span id="swmini" class="sw"></span></button>
  <button class="fila" onclick="cambiarFiltro()"><span>Mostrar</span><span class="mu" id="lfiltro"></span></button>
  <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
+ <button class="fila" onclick="$('fimport').click()"><span>Importar revisión</span><span class="mu">de otro dispositivo</span></button>
+ <input type="file" id="fimport" accept=".json,application/json" style="display:none" onchange="importar(this)">
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div>__NAVEGACION__
  <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: __VERSION__</div>
@@ -239,7 +241,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},rechazadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
+let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},rechazadas={},tiempos={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
 fetch("../aplicados.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
@@ -251,9 +253,10 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
 let timerToast=0;
 function aviso(txt,err){const t=$("toast");t.textContent=txt;t.classList.toggle("err",!!err);t.classList.add("on");
   clearTimeout(timerToast);timerToast=setTimeout(()=>t.classList.remove("on"),err?4000:1300);}
-try{descartadas=JSON.parse(localStorage.getItem(CLAVE+"_desc")||"{}");rechazadas=JSON.parse(localStorage.getItem(CLAVE+"_rech")||"{}")}catch(e){}
+try{descartadas=JSON.parse(localStorage.getItem(CLAVE+"_desc")||"{}");rechazadas=JSON.parse(localStorage.getItem(CLAVE+"_rech")||"{}");tiempos=JSON.parse(localStorage.getItem(CLAVE+"_t")||"{}")}catch(e){}
+function tocar(orig){tiempos[orig]=Date.now();}
 function guardar(txt){
-  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));localStorage.setItem(CLAVE+"_rech",JSON.stringify(rechazadas));
+  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));localStorage.setItem(CLAVE+"_rech",JSON.stringify(rechazadas));localStorage.setItem(CLAVE+"_t",JSON.stringify(tiempos));
     if(localStorage.getItem(CLAVE)!==JSON.stringify(marcas))throw 0;
     if(txt)aviso(txt);return true;}
   catch(e){aviso("⚠ No se pudo guardar. ¿Modo incógnito?",true);return false;}
@@ -357,14 +360,14 @@ function abrir(i){actual=i;sel=-1;const vi=$("vi");
   if(vi.getAttribute("src")!==DATOS[i].img){cargando=true;vi.src=DATOS[i].img;}$("ver").style.display="flex";reiniciarZoom(false);pintarVisor();}
 function cerrar(){if(editando)alternarEdicion();$("ver").style.display="none";pintar();}
 function mover(k){const n=orden[orden.indexOf(actual)+k];if(n!==undefined)abrir(n);else cerrar();}
-function marcar(v){const o=DATOS[actual].orig;marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar("Marca quitada");pintarVisor();return;}
+function marcar(v){const o=DATOS[actual].orig;tocar(o);marcas[o]=marcas[o]==v?"":v;if(!marcas[o]){delete marcas[o];guardar("Marca quitada");pintarVisor();return;}
   guardar("✓ Guardado: "+{ok:"Bien",mal:"Mal",ev:"Evaluar"}[v]);
   pintarVisor();setTimeout(()=>mover(1),150);}
 function alternarCajas(){mostrarAnot=!mostrarAnot;pintarVisor();aviso(mostrarAnot?"Cajas visibles":"Cajas ocultas · toca el ojo para verlas");}
 function alternarEdicion(){editando=!editando;sel=-1;
   $("ver").classList.toggle("editando",editando);$("bed").classList.toggle("on",editando);pintarVisor();setTimeout(()=>aplicarVista(false),0);}
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
-function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar("✓ Cajas guardadas");pintarVisor();}
+function cambio(){const d=DATOS[actual];tocar(d.orig);if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar("✓ Cajas guardadas");pintarVisor();}
 function ponerEtiqueta(l){etiquetaNueva=l;if(sel<0){pintarChips();return;}
   const d=DATOS[actual],actualF=figsDe(d)[sel],sg=sugDe(actualF);
   if(sg&&l!==sg&&actualF.i!==undefined){            // eligió otra cosa que la sugerida: la sugerencia se descarta
@@ -379,7 +382,7 @@ function decidirFaltante(fal){
 function nuevaCaja(){const f=editables(),l=etiquetaNueva||(f[0]&&f[0].label)||Object.keys(COLORES)[0];
   f.push(deCaja(l,[.42,.42,.58,.58]));sel=f.length-1;cambio();}
 function borrarCaja(){if(sel<0)return;editables().splice(sel,1);sel=-1;cambio();}
-function restaurar(){if(confirm("¿Volver a las cajas originales de esta foto?")){delete ediciones[DATOS[actual].orig];sel=-1;guardar("Cajas originales restauradas");pintarVisor();}}
+function restaurar(){if(confirm("¿Volver a las cajas originales de esta foto?")){tocar(DATOS[actual].orig);delete ediciones[DATOS[actual].orig];sel=-1;guardar("Cajas originales restauradas");pintarVisor();}}
 function punto(ev){const r=$("vi").getBoundingClientRect();
   return[Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))];}
 
@@ -508,7 +511,7 @@ function enviar(){
   const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
   const originales={};DATOS.forEach(d=>{if(d.orig in ediciones)originales[d.orig]=d.figs;});
   const fecha=new Date().toISOString(),res=resumenDe(m,ediciones);
-  const datos={formato:2,lote:LOTE,fecha,marcas:m,correcciones:ediciones,originales};
+  const datos={formato:2,lote:LOTE,fecha,marcas:m,correcciones:ediciones,originales,tiempos,rechazadas,descartadas};
   $("epasos").innerHTML="";$("eacc").innerHTML="";$("eres").innerHTML=htmlResumen(res);
   abrirEnvio("Enviando…","Preparando el archivo",8);
   setTimeout(()=>{abrirEnvio("Enviando…","Elige dónde enviarlo (WhatsApp, correo, Drive…)",45);
@@ -526,6 +529,34 @@ function enviar(){
       $("epasos").innerHTML="";$("eacc").innerHTML=`<button class="prim" onclick="enviar()">Reintentar</button><button onclick="cerrarEnvio()">Cerrar</button>`;});
   },450);
 }
+/* ---------- Sincronizar entre dispositivos (sin servidor) ----------
+   Combina una revisión (archivo enviado desde otro dispositivo, o la ya aplicada en la PC y publicada)
+   con la local. Por foto gana el cambio más reciente; las fotos que solo tiene un lado se agregan. */
+function fusionarRevision(r,yaAplicada){
+  if(!r||(r.lote&&r.lote!==LOTE))return 0;
+  const inv={bien:"ok",mal:"mal",evaluar:"ev"},rt=r.tiempos||{},base=Date.parse(r.fecha)||0;let n=0;
+  const fotos=new Set([...Object.keys(r.marcas||{}),...Object.keys(r.correcciones||{})]);
+  for(const o of fotos){
+    const tr=rt[o]||base,tl=tiempos[o]||0;if(tr<=tl)continue;
+    const m=r.marcas&&r.marcas[o];
+    if(m&&inv[m]&&marcas[o]!==inv[m]){marcas[o]=inv[m];n++;}
+    if(r.correcciones&&o in r.correcciones&&JSON.stringify(ediciones[o])!==JSON.stringify(r.correcciones[o])){ediciones[o]=r.correcciones[o];n++;}
+    tiempos[o]=tr;
+    if(yaAplicada){if(marcas[o])enviado.marcas[o]=marcas[o];if(o in ediciones)enviado.ediciones[o]=ediciones[o];}
+  }
+  for(const[o,l]of Object.entries(r.rechazadas||{})){const a=rechazadas[o]=rechazadas[o]||[];l.forEach(i=>a.includes(i)||a.push(i));}
+  for(const[o,l]of Object.entries(r.descartadas||{})){const a=descartadas[o]=descartadas[o]||[];l.forEach(i=>a.includes(i)||a.push(i));}
+  if(yaAplicada){try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}}
+  return n;}
+function importar(input){
+  const f=input.files&&input.files[0];input.value="";if(!f)return;
+  f.text().then(t=>{let r;try{r=JSON.parse(t)}catch(e){alert("El archivo no es una revisión válida.");return;}
+    if(r.lote&&r.lote!==LOTE){alert(`Ese archivo es de «${r.lote}», y este es «${LOTE}». Ábrelo en su lote.`);return;}
+    const n=fusionarRevision(r,false);guardar("");hoja(false);pintar();
+    aviso(n?`✓ Importado: ${n} cambios de otro dispositivo`:"No había nada nuevo en ese archivo");});}
+/* al abrir: trae lo que ya se aplicó en la PC y se publicó (feedback/revision_<lote>.json) */
+fetch(`../../feedback/revision_${LOTE}.json?t=${Date.now()}`,{cache:"no-store"}).then(r=>r.ok?r.json():null).then(r=>{
+  const n=fusionarRevision(r,true);if(n){guardar("");pintar();aviso(`✓ Sincronizado con la PC: ${n} cambios`);}}).catch(()=>{});
 function descargar(){
   const filas=["archivo,estado,editada"].concat(DATOS.map(d=>`"${d.orig}",${{ok:"bien",mal:"mal",ev:"evaluar"}[marcas[d.orig]]||"sin_revisar"},${d.orig in ediciones?"si":"no"}`));
   bajar(`resultado_${LOTE}.csv`,filas.join("\n"),"text/csv");
