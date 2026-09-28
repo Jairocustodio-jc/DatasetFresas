@@ -19,6 +19,9 @@
   parecido al anterior (45 % vs 42 % de sugerencias correctas), pero **aprendió el criterio de la persona**: en el lote 4 bajó
   de 21 a 8 las sugerencias `early-pink → unripe` (su error típico) y subió de 18 a 28 `commercial-basic → early-pink`
   (la corrección humana más común). Con él se regeneraron las sugerencias de los lotes 3 y 4, otra vez filtradas a mano.
+- `yolo_fresas_lote01_03.pt`: reentrenado con los lotes 1–3 (773 fotos). En 120 fotos de validación: 56 % de sugerencias
+  correctas (antes 49 %) y menos falsas alarmas (16 contra 23). Revisión del lote 3 (modelo anterior): 57 % de sugerencias
+  aceptadas y 12 de 17 faltantes agregadas. Lote 5 generado con este modelo y filtrado a mano.
 - `scripts/`: preparar el dataset desde la revisión (`preparar.py`), entrenar (`entrenar.py`), validar contra la revisión
   (`validar.py`) y escribir las sugerencias en un lote (`inyectar.py modelo lote umbral_estado umbral_faltantes`).
   Son scripts de trabajo con rutas del entorno donde se entrenó; hay que ajustar las rutas para usarlos en otra máquina.
