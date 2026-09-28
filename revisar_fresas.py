@@ -269,7 +269,7 @@ function sinEnviar(){const n=new Set();
 function hace(t){const m=Math.round((Date.now()-t)/60000);return m<1?"hace un momento":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`;}
 function pintarEstado(){
   const h=Object.keys(marcas).length,e=Object.keys(ediciones).length,p=sinEnviar();
-  let t=h||e?`<b>✓ ${h} guardada${h==1?"":"s"}</b>${e?` · ${e} ✎`:""}`:"Se guarda solo en este celular";
+  let t=h||e?`<b>✓ ${h} guardada${h==1?"":"s"}</b>${e?` · ${e} ✎`:""}`:(nubeActiva()?"Sin marcas todavía":"Se guarda solo en este dispositivo");
   const pc=estadoPC();
   if(nubeActiva())t+=nube.estado=="subiendo"?" · ☁ subiendo…":nube.estado=="error"?` · <span class="pend">⚠ sin sincronizar (${nube.err})</span>`:" · ☁ sincronizado";
   if(nubeActiva()&&p==0);else if(p)t+=` · <span class="pend">${p} sin enviar</span>`;
@@ -586,21 +586,21 @@ async function asegurarRama(){
   if(!f.ok&&f.status!=422)throw errGH(f,"crear la rama «resultados»");}
 function programarSubida(ms){if(!nubeActiva())return;clearTimeout(timerNube);timerNube=setTimeout(()=>sincronizar(),ms??3000);}
 /* trae lo de GitHub (otro dispositivo), combina (gana lo más reciente por foto) y sube el resultado */
-function sincronizar(){if(!nubeActiva())return Promise.resolve(false);if(subiendo)return subiendo.then(()=>sincronizar());
+function sincronizar(forzar){if(!nubeActiva())return Promise.resolve(false);if(subiendo)return subiendo.then(()=>sincronizar(forzar));
   subiendo=(async()=>{nube.estado="subiendo";pintarEstado();
     try{await asegurarRama();
       for(let intento=0;intento<3;intento++){
         const x=await leerNube(LOTE+".json");nube.sha=x?x.sha:undefined;
         if(x&&fusionarRevision(x.datos,false)){guardarLocal();pintar();}
         const d=datosActuales();
-        if(x&&JSON.stringify({m:x.datos.marcas,c:x.datos.correcciones})===JSON.stringify({m:d.marcas,c:d.correcciones})){registrarEnvioNube(d);break;}
+        if(!forzar&&x&&JSON.stringify({m:x.datos.marcas,c:x.datos.correcciones})===JSON.stringify({m:d.marcas,c:d.correcciones})){registrarEnvioNube(d);break;}
         const r=await api(`/contents/${encodeURIComponent(LOTE+".json")}`,{method:"PUT",body:JSON.stringify({
           message:`Revisión ${LOTE}: ${d.resumen.fotos} fotos (${d.resumen.bien} bien, ${d.resumen.mal} mal, ${d.resumen.evaluar} evaluar)`,
           content:b64a(JSON.stringify(d,null,1)),branch:RAMA,...(nube.sha?{sha:nube.sha}:{})})});
         if(r.status==409||r.status==422)continue;          // otro dispositivo escribió justo ahora: releer y combinar
         if(!r.ok)throw errGH(r,"guardar la revisión");
         nube.sha=(await r.json()).content.sha;registrarEnvioNube(d);break;}
-      nube.estado="ok";nube.err="";return true;
+      nube.estado="ok";nube.err="";ultimaSync=Date.now();return true;
     }catch(e){nube.estado="error";nube.err=e.message=="Failed to fetch"?"sin conexión":e.message;
       clearTimeout(timerNube);timerNube=setTimeout(()=>sincronizar(),30000);return false;}
     finally{subiendo=null;pintarEstado();}})();
@@ -610,15 +610,34 @@ function guardarLocal(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas));l
   localStorage.setItem(CLAVE+"_t",JSON.stringify(tiempos));}catch(e){}}
 function registrarEnvioNube(d){enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),
   t:Date.now(),fecha:d.fecha,resumen:d.resumen};try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}}
-async function conectarGitHub(){
+let ultimaSync=0;
+/* menú ⋯ → Sincronizar con GitHub: si no hay token, lo pide; si ya hay, muestra el estado y las opciones */
+function conectarGitHub(){
   if(!GH){alert("Solo funciona desde la página publicada en GitHub Pages.");return;}
-  if(nube.token){if(confirm("¿Dejar de sincronizar con GitHub en este dispositivo? (Lo ya subido queda en GitHub.)")){
-    nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}return;}
+  hoja(false);if(!nube.token){pedirToken();return;}
+  const ok=nube.estado!="error";
+  abrirEnvio(ok?"☁ Sincronización con GitHub":"⚠ Sincronización con problemas",
+    ok?(ultimaSync?`Conectado · última sincronización ${hace(ultimaSync)}`:"Conectado"):nube.err,ok?100:100,!ok);
+  $("epasos").innerHTML="";$("eres").innerHTML="";
+  $("eacc").innerHTML=`<button class="prim" onclick="sincronizarAhora()">Sincronizar ahora</button><button onclick="pedirToken()">Cambiar token</button>`;
+  $("epasos").innerHTML=`<li><span class="ico">·</span><span>El token se guarda solo en este dispositivo y sirve para todos los lotes.<small><a href="#" onclick="desconectarGitHub();return false" style="color:var(--mal)">Desconectar este dispositivo</a></small></span></li>`;}
+async function sincronizarAhora(){abrirEnvio("Sincronizando…","",40);$("eacc").innerHTML="";$("epasos").innerHTML="";
+  const ok=await sincronizar();
+  abrirEnvio(ok?"✓ Sincronizado":"No se pudo sincronizar",ok?`Todo al día · ${new Date().toLocaleTimeString()}`:nube.err,100,!ok);
+  $("eacc").innerHTML=ok?`<button class="prim" onclick="cerrarEnvio()">Listo</button>`:`<button class="prim" onclick="pedirToken()">Cambiar token</button><button onclick="cerrarEnvio()">Cerrar</button>`;}
+async function pedirToken(){
+  cerrarEnvio();
   const t=(prompt("Pega tu token de GitHub (fine-grained, solo el repositorio "+GH.repo+", permiso «Contents: Read and write»). Se guarda solo en este dispositivo.")||"").trim();
-  if(!t)return;nube.token=t;try{localStorage.setItem("fresas_token",t)}catch(e){}
-  hoja(false);aviso("Conectando con GitHub…");
-  if(await sincronizar())aviso("✓ Sincronizado con GitHub");
-  else{alert("No se pudo conectar:\n\n"+nube.err+".\n\nCorrige el token en GitHub (o crea uno nuevo) y vuelve a intentarlo.");nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}}
+  if(!t)return;const anterior=nube.token;nube.token=t;
+  abrirEnvio("Conectando con GitHub…","",40);$("eacc").innerHTML="";$("epasos").innerHTML="";$("eres").innerHTML="";
+  if(await sincronizar(true)){try{localStorage.setItem("fresas_token",t)}catch(e){}   // true: prueba también que puede escribir
+    abrirEnvio("✓ Conectado","Tus cambios se sincronizan solos en este dispositivo",100);$("eacc").innerHTML=`<button class="prim" onclick="cerrarEnvio()">Listo</button>`;}
+  else{const err=nube.err;nube.token=anterior;nube.estado="off";nube.err="";if(anterior)sincronizar();   // vuelve al token que funcionaba
+    abrirEnvio("No se pudo conectar",err,100,true);
+    $("eacc").innerHTML=`<button class="prim" onclick="pedirToken()">Probar otro token</button><button onclick="cerrarEnvio()">Cerrar</button>`;}
+  pintarEstado();}
+function desconectarGitHub(){if(!confirm("¿Desconectar este dispositivo de GitHub? Lo ya subido queda en GitHub y tus marcas siguen aquí."))return;
+  nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}cerrarEnvio();pintarEstado();aviso("Desconectado de GitHub");}
 window.addEventListener("online",()=>{if(nube.estado=="error")sincronizar();});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")programarSubida(300);else if(nubeActiva()&&sinEnviar())sincronizar();});
 if(nubeActiva())programarSubida(200);
