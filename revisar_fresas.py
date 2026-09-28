@@ -238,7 +238,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
 const LOTE=__LOTE__;
 const DATOS=__DATOS__;
 const CLAVE="fresas_"+LOTE;
-let filtro="todas",orden=[],marcas={},ediciones={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
+let filtro="todas",orden=[],marcas={},ediciones={},descartadas={},mini=false,mostrarAnot=true,ocultoTemp=false,actual=-1,editando=false,sel=-1,etiquetaNueva=null,arrastre=null;
 try{marcas=JSON.parse(localStorage.getItem(CLAVE)||"{}");ediciones=JSON.parse(localStorage.getItem(CLAVE+"_ed")||"{}");mini=localStorage.getItem("fresas_mini")=="1"}catch(e){}
 let enviado={marcas:{},ediciones:{},t:0},aplicados={},enviando=false;
 fetch("../aplicados.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(j=>{aplicados=j||{};pintarEstado();}).catch(()=>{});
@@ -250,8 +250,9 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
 let timerToast=0;
 function aviso(txt,err){const t=$("toast");t.textContent=txt;t.classList.toggle("err",!!err);t.classList.add("on");
   clearTimeout(timerToast);timerToast=setTimeout(()=>t.classList.remove("on"),err?4000:1300);}
+try{descartadas=JSON.parse(localStorage.getItem(CLAVE+"_desc")||"{}")}catch(e){}
 function guardar(txt){
-  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));
+  try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));
     if(localStorage.getItem(CLAVE)!==JSON.stringify(marcas))throw 0;
     if(txt)aviso(txt);return true;}
   catch(e){aviso("⚠ No se pudo guardar. ¿Modo incógnito?",true);return false;}
@@ -279,6 +280,11 @@ function figsDe(d){return ediciones[d.orig]||d.figs;}
 function caja(f){const xs=f.pts.map(p=>p[0]),ys=f.pts.map(p=>p[1]);return[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];}
 function deCaja(label,[x1,y1,x2,y2]){return{label,pts:[[x1,y1],[x2,y1],[x2,y2],[x1,y2]]};}
 function sugDe(f){return f.sug&&f.sug!==f.label?f.sug:null;}
+/* cajas que el modelo ve y no están anotadas; desaparecen al aceptarlas o descartarlas */
+function faltan(d){const ya=figsDe(d);return(d.falta||[]).filter((p,k)=>!(descartadas[d.orig]||[]).includes(k)&&!ya.some(f=>iouN(caja(f),caja(p))>=0.5));}
+function iouN(a,b){const ix=Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])),iy=Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1])),I=ix*iy;
+  const U=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-I;return U?I/U:0;}
+function svgFaltan(d){return faltan(d).map(p=>`<polygon points="${p.pts.map(q=>q.join(",")).join(" ")}" fill="rgba(255,255,255,.08)" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>`).join("");}
 function svgDe(figs,conSel){
   return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"${sugDe(f)?' stroke-dasharray="6 4"':""}/>`).join("");
 }
@@ -294,13 +300,16 @@ function etqDe(figs,conSel){
   return h;
 }
 function verCajas(){return !cargando&&(editando||(mostrarAnot&&!ocultoTemp));}
-function pintarCapa(){if(actual<0)return;$("ve").innerHTML=verCajas()?etqDe(figsDe(DATOS[actual]),editando):"";}
+function pintarCapa(){if(actual<0)return;const d=DATOS[actual];
+  $("ve").innerHTML=verCajas()?etqDe(figsDe(d),editando)+etqFaltan(d):"";}
+function etqFaltan(d){const r=$("vi").getBoundingClientRect(),v=document.querySelector("#ver .img").getBoundingClientRect();
+  return faltan(d).map(p=>{const[x,y]=caja(p);return `<span class="e cs" style="left:${(r.left-v.left+x*r.width).toFixed(1)}px;top:${(r.top-v.top+y*r.height).toFixed(1)}px"><b class="sg" style="background:#fff">¿falta ${p.label}?</b></span>`}).join("");}
 let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
-const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe));
+const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe)||(d.falta||[]).length);
 const FILTROS=HAY_SUG?{todas:"Todas",sug:"Con sugerencia",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"}:{todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
-function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe):filtro=="pend"?!m:m==filtro);}
+function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe)||faltan(d).length>0:filtro=="pend"?!m:m==filtro);}
 function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
 function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
@@ -310,7 +319,7 @@ function pintar(){
   DATOS.forEach((d,i)=>{
     if(!pasaFiltro(d))return;orden.push(i);
     const c=document.createElement("div");c.className="c "+(marcas[d.orig]||"");
-    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':figsDe(d).some(sugDe)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
+    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':(figsDe(d).some(sugDe)||faltan(d).length)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
   if(!orden.length)g.innerHTML=`<div class="vacio">No hay fotos en «${FILTROS[filtro]}»</div>`;
@@ -322,7 +331,7 @@ function pintar(){
 }
 function seguir(){if(!orden.length)return;if(filtro!="todas"){abrir(orden[0]);return;}const i=DATOS.findIndex(d=>!marcas[d.orig]);abrir(i<0?0:i);}
 function pintarVisor(){const d=DATOS[actual],f=figsDe(d),m=marcas[d.orig];
-  $("vs").innerHTML=verCajas()?svgDe(f,editando):"";pintarCapa();$("bojo").classList.toggle("off",!mostrarAnot);
+  $("vs").innerHTML=verCajas()?svgDe(f,editando)+svgFaltan(d):"";pintarCapa();$("bojo").classList.toggle("off",!mostrarAnot);
   $("vpos").textContent=`${orden.indexOf(actual)+1} / ${orden.length}`;
   $("bok").classList.toggle("on",m=="ok");$("bmal").classList.toggle("on",m=="mal");$("bev").classList.toggle("on",m=="ev");
   const ve=$("vest");ve.className="chipest "+(m||"");ve.textContent=(m?{ok:"Bien",mal:"Mal",ev:"Evaluar"}[m]:"Sin marcar")+(d.orig in ediciones?" · ✎":"");
@@ -347,6 +356,11 @@ function alternarEdicion(){editando=!editando;sel=-1;
 function editables(){const d=DATOS[actual];if(!ediciones[d.orig])ediciones[d.orig]=JSON.parse(JSON.stringify(d.figs));return ediciones[d.orig];}
 function cambio(){const d=DATOS[actual];if(JSON.stringify(ediciones[d.orig])==JSON.stringify(d.figs))delete ediciones[d.orig];guardar("✓ Cajas guardadas");pintarVisor();}
 function ponerEtiqueta(l){etiquetaNueva=l;if(sel>=0){editables()[sel].label=l;cambio();}else pintarChips();}
+function decidirFaltante(fal){
+  const d=DATOS[actual],k=d.falta.indexOf(fal);
+  if(confirm(`¿Agregar esta caja como «${fal.label}»?\n\nAceptar = agregar · Cancelar = descartar la sugerencia`)){
+    const f=editables();f.push({label:fal.label,pts:JSON.parse(JSON.stringify(fal.pts))});sel=f.length-1;cambio();}
+  else{(descartadas[d.orig]=descartadas[d.orig]||[]).push(k);guardar("Sugerencia descartada");pintarVisor();}}
 function nuevaCaja(){const f=editables(),l=etiquetaNueva||(f[0]&&f[0].label)||Object.keys(COLORES)[0];
   f.push(deCaja(l,[.42,.42,.58,.58]));sel=f.length-1;cambio();}
 function borrarCaja(){if(sel<0)return;editables().splice(sel,1);sel=-1;cambio();}
@@ -387,6 +401,8 @@ function iniciarUnDedo(ev){gesto={tipo:"pendiente",x0:ev.clientX,y0:ev.clientY,t
     if(esq>=0){gesto={tipo:"esq",esq,caja:[x1,y1,x2,y2],sx:ev.clientX,sy:ev.clientY};return;}}
   let mejor=-1,area=9;
   f.forEach((fi,i)=>{const[x1,y1,x2,y2]=caja(fi);if(p[0]>=x1&&p[0]<=x2&&p[1]>=y1&&p[1]<=y2&&(x2-x1)*(y2-y1)<area){mejor=i;area=(x2-x1)*(y2-y1);}});
+  if(mejor<0){const fal=faltan(DATOS[actual]).find(q=>{const[x1,y1,x2,y2]=caja(q);return p[0]>=x1&&p[0]<=x2&&p[1]>=y1&&p[1]<=y2;});
+    if(fal){gesto=null;decidirFaltante(fal);return;}}
   if(mejor>=0){sel=mejor;gesto={tipo:"mover",inicio:p,caja:caja(f[sel]),sx:ev.clientX,sy:ev.clientY};pintarVisor();}
 }
 vista.addEventListener("pointerdown",ev=>{
