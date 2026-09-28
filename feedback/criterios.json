@@ -1,0 +1,60 @@
+{
+ "fronteras": [
+  {
+   "medida": "color_pct",
+   "umbral": 0.5,
+   "error": 0.006,
+   "n": 1082
+  },
+  {
+   "medida": "color_pct",
+   "umbral": 53.5,
+   "error": 0.123,
+   "n": 163
+  },
+  {
+   "medida": "color_pct",
+   "umbral": 72.1,
+   "error": 0.165,
+   "n": 182
+  },
+  {
+   "medida": "color_pct",
+   "umbral": 87.6,
+   "error": 0.095,
+   "n": 316
+  }
+ ],
+ "orden": [
+  "unripe",
+  "early-pink",
+  "commercial-basic",
+  "commercial-high",
+  "overripe"
+ ],
+ "umbrales_agente": [
+  0.5,
+  50,
+  75,
+  90
+ ],
+ "cajas": 1469,
+ "cambios": {
+  "commercial-basic -> early-pink": 28,
+  "commercial-high -> overripe": 14,
+  "overripe -> commercial-high": 14,
+  "commercial-high -> early-pink": 6,
+  "early-pink -> commercial-basic": 1,
+  "commercial-high -> commercial-basic": 9,
+  "commercial-basic -> overripe": 2,
+  "commercial-basic -> commercial-high": 14,
+  "early-pink -> commercial-high": 1,
+  "unripe -> early-pink": 2,
+  "early-pink -> unripe": 1,
+  "overripe -> commercial-basic": 1
+ },
+ "fuentes": [
+  "revision_lote_01.json"
+ ],
+ "fecha": "2026-09-27T19:19:33-05:00"
+}
