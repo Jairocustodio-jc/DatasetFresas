@@ -128,7 +128,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <input type="file" id="fimport" accept=".json,application/json" style="display:none" onchange="importar(this)">
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div><a class="fila" href="../lote_01/index.html"><span>‹ Lote 1</span></a><a class="fila" href="../lote_03/index.html"><span>Lote 3 ›</span></a><a class="fila" href="../index.html"><span>Todos los lotes</span></a>
- <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 28/09 01:10</div>
+ <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 28/09 09:48</div>
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
@@ -468,21 +468,23 @@ function nubeActiva(){return !!(GH&&nube.token);}
 function api(ruta,op={}){return fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${ruta}`,{...op,cache:"no-store",
   headers:{Authorization:"Bearer "+nube.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(op.body?{"Content-Type":"application/json"}:{})}});}
 const b64a=t=>btoa(unescape(encodeURIComponent(t))),a64b=b=>decodeURIComponent(escape(atob(b.replace(/\s/g,""))));
-function errGH(r){return new Error(r.status==401?"token inválido o vencido":r.status==403||r.status==404?"el token no tiene permiso":"GitHub "+r.status);}
+function errGH(r,paso){const q=paso?` (${paso})`:"";
+  return new Error(r.status==401?"token inválido, vencido o mal copiado"+q
+    :r.status==404?`el token no tiene acceso al repositorio ${GH.repo}: en «Repository access» elige «Only select repositories» y márcalo`+q
+    :r.status==403?"el token puede ver el repositorio pero no escribir: en Permissions → Repositories, «Contents» debe estar en «Read and write»"+q
+    :r.status==422?"GitHub rechazó la operación (422)"+q:"GitHub respondió "+r.status+q);}
 async function leerNube(nombre){
-  const r=await api(`/contents/${encodeURIComponent(nombre)}?ref=${RAMA}`);if(r.status==404)return null;if(!r.ok)throw errGH(r);
+  const r=await api(`/contents/${encodeURIComponent(nombre)}?ref=${RAMA}`);if(r.status==404)return null;if(!r.ok)throw errGH(r,"leer lo sincronizado");
   const j=await r.json();let txt=j.content&&j.encoding=="base64"?a64b(j.content):null;
   if(txt===null){const b=await api(`/git/blobs/${j.sha}`);if(!b.ok)throw errGH(b);txt=a64b((await b.json()).content);}
   return{sha:j.sha,datos:JSON.parse(txt)};}
 async function asegurarRama(){
-  const r=await api(`/git/ref/heads/${RAMA}`);if(r.ok)return;if(r.status!=404)throw errGH(r);
-  const t=await api("/git/trees",{method:"POST",body:JSON.stringify({tree:[{path:"LEEME.md",mode:"100644",type:"blob",
-    content:"Revisión hecha desde la página (un archivo por lote). La escribe la página; en la PC: revisar_fresas.py --aplicar github\n"}]})});
-  if(!t.ok)throw errGH(t);
-  const c=await api("/git/commits",{method:"POST",body:JSON.stringify({message:"Crear rama de resultados",tree:(await t.json()).sha,parents:[]})});
-  if(!c.ok)throw errGH(c);
-  const f=await api("/git/refs",{method:"POST",body:JSON.stringify({ref:"refs/heads/"+RAMA,sha:(await c.json()).sha})});
-  if(!f.ok&&f.status!=422)throw errGH(f);}
+  const r=await api(`/git/ref/heads/${RAMA}`);if(r.ok)return;if(r.status!=404)throw errGH(r,"leer la rama");
+  const repo=await api("");if(!repo.ok)throw errGH(repo,"abrir el repositorio");
+  const def=(await repo.json()).default_branch;
+  const b=await api(`/git/ref/heads/${encodeURIComponent(def)}`);if(!b.ok)throw errGH(b,"leer la rama principal");
+  const f=await api("/git/refs",{method:"POST",body:JSON.stringify({ref:"refs/heads/"+RAMA,sha:(await b.json()).object.sha})});
+  if(!f.ok&&f.status!=422)throw errGH(f,"crear la rama «resultados»");}
 function programarSubida(ms){if(!nubeActiva())return;clearTimeout(timerNube);timerNube=setTimeout(()=>sincronizar(),ms??3000);}
 /* trae lo de GitHub (otro dispositivo), combina (gana lo más reciente por foto) y sube el resultado */
 function sincronizar(){if(!nubeActiva())return Promise.resolve(false);if(subiendo)return subiendo.then(()=>sincronizar());
@@ -497,7 +499,7 @@ function sincronizar(){if(!nubeActiva())return Promise.resolve(false);if(subiend
           message:`Revisión ${LOTE}: ${d.resumen.fotos} fotos (${d.resumen.bien} bien, ${d.resumen.mal} mal, ${d.resumen.evaluar} evaluar)`,
           content:b64a(JSON.stringify(d,null,1)),branch:RAMA,...(nube.sha?{sha:nube.sha}:{})})});
         if(r.status==409||r.status==422)continue;          // otro dispositivo escribió justo ahora: releer y combinar
-        if(!r.ok)throw errGH(r);
+        if(!r.ok)throw errGH(r,"guardar la revisión");
         nube.sha=(await r.json()).content.sha;registrarEnvioNube(d);break;}
       nube.estado="ok";nube.err="";return true;
     }catch(e){nube.estado="error";nube.err=e.message=="Failed to fetch"?"sin conexión":e.message;
@@ -517,7 +519,7 @@ async function conectarGitHub(){
   if(!t)return;nube.token=t;try{localStorage.setItem("fresas_token",t)}catch(e){}
   hoja(false);aviso("Conectando con GitHub…");
   if(await sincronizar())aviso("✓ Sincronizado con GitHub");
-  else{alert("No se pudo conectar: "+nube.err+".");nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}}
+  else{alert("No se pudo conectar:\n\n"+nube.err+".\n\nCorrige el token en GitHub (o crea uno nuevo) y vuelve a intentarlo.");nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}}
 window.addEventListener("online",()=>{if(nube.estado=="error")sincronizar();});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")programarSubida(300);else if(nubeActiva()&&sinEnviar())sincronizar();});
 if(nubeActiva())programarSubida(200);
