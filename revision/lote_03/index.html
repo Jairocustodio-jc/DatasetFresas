@@ -125,7 +125,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
  <div class="sep"></div><a class="fila" href="../lote_02/index.html"><span>‹ Lote 2</span></a><a class="fila" href="../lote_04/index.html"><span>Lote 4 ›</span></a><a class="fila" href="../index.html"><span>Todos los lotes</span></a>
- <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 27/09 20:23</div>
+ <div class="mu" style="font-size:11px;padding:10px 20px 0">Versión de la página: 27/09 21:18</div>
 </div></div>
 <div id="ver">
  <div class="vtop"><button class="ic" onclick="cerrar()">✕</button><span class="pos" id="vpos"></span><span class="chipest" id="vest"></span><span class="sp"></span>
@@ -190,6 +190,9 @@ function sugDe(f){if(!f.sug||f.sug===f.label)return null;
 function faltan(d){const ya=figsDe(d);return(d.falta||[]).filter((p,k)=>!(descartadas[d.orig]||[]).includes(k)&&!ya.some(f=>iouN(caja(f),caja(p))>=0.5));}
 function iouN(a,b){const ix=Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])),iy=Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1])),I=ix*iy;
   const U=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-I;return U?I/U:0;}
+/* dos cajas casi idénticas sobre la misma fresa: se avisa en ambas hasta que se borre una */
+function dupsDe(figs){const r=new Set();for(let a=0;a<figs.length;a++)for(let b=a+1;b<figs.length;b++)
+  if(iouN(caja(figs[a]),caja(figs[b]))>=0.8){r.add(a);r.add(b);}return r;}
 function svgFaltan(d){return faltan(d).map(p=>`<polygon points="${p.pts.map(q=>q.join(",")).join(" ")}" fill="rgba(255,255,255,.08)" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4"/>`).join("");}
 function svgDe(figs,conSel){
   return figs.map((f,i)=>`<polygon points="${f.pts.map(p=>p.join(",")).join(" ")}" fill="${conSel&&i==sel?"rgba(255,255,255,.12)":"none"}" stroke="${color(f.label)}" stroke-width="2" vector-effect="non-scaling-stroke"${sugDe(f)?' stroke-dasharray="6 4"':""}/>`).join("");
@@ -198,8 +201,9 @@ function svgDe(figs,conSel){
 function etqDe(figs,conSel){
   const r=$("vi").getBoundingClientRect(),v=document.querySelector("#ver .img").getBoundingClientRect();
   const X=x=>(r.left-v.left+x*r.width).toFixed(1)+"px",Y=y=>(r.top-v.top+y*r.height).toFixed(1)+"px";
-  let h=figs.map(f=>{const[x,y]=caja(f),s=sugDe(f);return s
-    ?`<span class="e cs" style="left:${X(x)};top:${Y(y)}"><i style="background:${color(f.label)}">${f.label}</i><b class="sg" style="background:${color(s)}">¿${s}?</b></span>`
+  const dup=dupsDe(figs);
+  let h=figs.map((f,k)=>{const[x,y]=caja(f),s=sugDe(f),dp=dup.has(k);return s||dp
+    ?`<span class="e cs" style="left:${X(x)};top:${Y(y)}"><i style="background:${color(f.label)}">${f.label}</i>${s?`<b class="sg" style="background:${color(s)}">¿${s}?</b>`:""}${dp?`<b class="sg" style="background:#ff453a;color:#fff">¿duplicada? borra una</b>`:""}</span>`
     :`<span class="e" style="left:${X(x)};top:${Y(y)};background:${color(f.label)}">${f.label}</span>`}).join("");
   if(conSel&&sel>=0&&figs[sel]){const[x1,y1,x2,y2]=caja(figs[sel]);
     [[x1,y1],[x2,y1],[x2,y2],[x1,y2]].forEach(([x,y])=>h+=`<span class="h" style="left:${X(x)};top:${Y(y)}"></span>`);}
@@ -214,9 +218,9 @@ let rafCapa=0;
 function seguirCapa(ms){cancelAnimationFrame(rafCapa);const fin=performance.now()+ms;
   const paso=()=>{pintarCapa();if(performance.now()<fin)rafCapa=requestAnimationFrame(paso);};paso();}
 DATOS.forEach(d=>marcarFoto(d.figs,d.orig));
-const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe)||(d.falta||[]).length);
+const HAY_SUG=DATOS.some(d=>d.figs.some(sugDe)||(d.falta||[]).length||dupsDe(d.figs).size);
 const FILTROS=HAY_SUG?{todas:"Todas",sug:"Con sugerencia",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"}:{todas:"Todas",ev:"A evaluar",mal:"Mal",ok:"Bien",pend:"Sin revisar"};
-function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe)||faltan(d).length>0:filtro=="pend"?!m:m==filtro);}
+function pasaFiltro(d){const m=marcas[d.orig];return filtro=="todas"||(filtro=="sug"?figsDe(d).some(sugDe)||faltan(d).length>0||dupsDe(figsDe(d)).size>0:filtro=="pend"?!m:m==filtro);}
 function cambiarFiltro(){const k=Object.keys(FILTROS);filtro=k[(k.indexOf(filtro)+1)%k.length];pintar();hoja(true);}
 function hoja(on){$("hoja").classList.toggle("on",on);$("lfiltro").textContent=FILTROS[filtro];$("swmini").classList.toggle("on",mini);
   const n={};DATOS.forEach(d=>figsDe(d).forEach(f=>n[f.label]=(n[f.label]||0)+1));
@@ -226,7 +230,7 @@ function pintar(){
   DATOS.forEach((d,i)=>{
     if(!pasaFiltro(d))return;orden.push(i);
     const c=document.createElement("div");c.className="c "+(marcas[d.orig]||"");
-    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':(figsDe(d).some(sugDe)||faltan(d).length)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
+    c.innerHTML=`<img loading="lazy" src="${d.img}">${mini?`<svg viewBox="0 0 1 1" preserveAspectRatio="none">${svgDe(figsDe(d))}</svg>`:""}<span class="d"></span>${d.orig in ediciones?'<span class="p">✎</span>':(figsDe(d).some(sugDe)||faltan(d).length||dupsDe(figsDe(d)).size)&&!marcas[d.orig]?'<span class="p">?</span>':""}`;
     c.onclick=()=>abrir(i);g.appendChild(c);
   });
   if(!orden.length)g.innerHTML=`<div class="vacio">No hay fotos en «${FILTROS[filtro]}»</div>`;

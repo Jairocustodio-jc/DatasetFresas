@@ -10,6 +10,10 @@
 - Lote 3 (mismo modelo): 114 sugerencias de estado + 23 faltantes; tras revisión visual se quitaron 12 sugerencias
   (7 `early-pink` con rubor marcadas como `unripe`, 5 `commercial-high` anaranjadas o con zonas pálidas marcadas como `overripe`)
   y 10 faltantes (flores, hojas, centros de flor). Quedan 102 + 13.
+- Lote 4 (mismo modelo): 111 + 29; tras revisión visual se quitaron 24 sugerencias (16 `early-pink` con rubor marcadas como
+  `unripe`, 8 `commercial-high` anaranjadas marcadas como `overripe`) y 17 faltantes (flores, hojas, piedras). Quedan 87 + 12.
+  Patrón: YOLO confunde `early-pink` con rubor leve y `unripe`; esas sugerencias casi siempre están mal.
+- La página avisa además «¿duplicada?» cuando dos cajas se superponen ≥ 80 % (38 casos en los lotes 1–10).
 - `scripts/`: preparar el dataset desde la revisión (`preparar.py`), entrenar (`entrenar.py`), validar contra la revisión
   (`validar.py`) y escribir las sugerencias en un lote (`inyectar.py modelo lote umbral_estado umbral_faltantes`).
   Son scripts de trabajo con rutas del entorno donde se entrenó; hay que ajustar las rutas para usarlos en otra máquina.
