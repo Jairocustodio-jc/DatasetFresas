@@ -23,6 +23,7 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
 | Generar lotes por prioridad | `python revisar_fresas.py $raiz --carpeta dataset_5estados --lista "$raiz\informe\cambios.csv"` |
 | Subir a la página | `git add -A` · `git commit -m "Lote N"` · `git push` |
 | Aplicar lo enviado desde el celular | `python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar revision_lote_01.json` |
+| Aplicar lo sincronizado en GitHub | `python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar github` |
 | Actualizar las páginas tras cambiar el script | `python revisar_fresas.py --rehacer-html` |
 | Aprender tus criterios de lotes ya revisados | `python revisar_fresas.py $raiz --carpeta dataset_5estados --feedback feedback\revision_lote_01.json` |
 
@@ -49,6 +50,7 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
   - **＋** crea una caja nueva, **⌫** borra la seleccionada y **↺** vuelve a las cajas originales.
 - **Menú ⋯:** leyenda, filtro **Mostrar** (Todas / A evaluar / Mal / Bien / Sin revisar), Enviar, CSV y cambio de lote.
 - **Guardado:** todo se guarda al instante **en ese navegador de ese celular** («✓ Guardado»). Arriba del lote se ve cuántas fotos faltan enviar.
+- **Sincronizar con GitHub (automático):** menú **⋯ → Sincronizar con GitHub** y pega un token *fine-grained* (solo este repositorio, permiso **Contents: Read and write**). Se guarda solo en ese dispositivo. Desde ese momento cada cambio se sube solo a la rama `resultados` y los demás dispositivos conectados lo reciben al abrir o volver a la página. En la PC: `python revisar_fresas.py $raiz --carpeta dataset_5estados --aplicar github` aplica todo lo sincronizado (y omite lo ya aplicado).
 - **Varios dispositivos (celular y laptop):**
   - al abrir un lote, la página **carga sola** lo que ya se aplicó en la PC y se subió con `git push` (`feedback/revision_<lote>.json`);
   - menú **⋯ → Importar revisión**: carga el archivo que enviaste desde el otro dispositivo. Si una foto se revisó en los dos, gana el cambio más reciente.

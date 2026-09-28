@@ -222,6 +222,7 @@ header{position:sticky;top:0;z-index:2;background:var(--bg);padding:14px 16px 10
  <button class="fila" onclick="mini=!mini;guardarPref();pintar();hoja(true)"><span>Cajas en miniaturas</span><span id="swmini" class="sw"></span></button>
  <button class="fila" onclick="cambiarFiltro()"><span>Mostrar</span><span class="mu" id="lfiltro"></span></button>
  <button class="fila" onclick="enviar()"><span>Enviar resultados a la PC</span><span class="mu" id="ned"></span></button>
+ <button class="fila" onclick="conectarGitHub()"><span>Sincronizar con GitHub</span><span class="mu" id="lgh"></span></button>
  <button class="fila" onclick="$('fimport').click()"><span>Importar revisión</span><span class="mu">de otro dispositivo</span></button>
  <input type="file" id="fimport" accept=".json,application/json" style="display:none" onchange="importar(this)">
  <button class="fila" onclick="descargar()"><span>Descargar tabla</span><span class="mu">CSV</span></button>
@@ -258,7 +259,7 @@ function tocar(orig){tiempos[orig]=Date.now();}
 function guardar(txt){
   try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));localStorage.setItem(CLAVE+"_rech",JSON.stringify(rechazadas));localStorage.setItem(CLAVE+"_t",JSON.stringify(tiempos));
     if(localStorage.getItem(CLAVE)!==JSON.stringify(marcas))throw 0;
-    if(txt)aviso(txt);return true;}
+    if(txt)aviso(txt);programarSubida();return true;}
   catch(e){aviso("⚠ No se pudo guardar. ¿Modo incógnito?",true);return false;}
 }
 /* fotos con cambios desde el último envío */
@@ -270,10 +271,12 @@ function pintarEstado(){
   const h=Object.keys(marcas).length,e=Object.keys(ediciones).length,p=sinEnviar();
   let t=h||e?`<b>✓ ${h} guardada${h==1?"":"s"}</b>${e?` · ${e} ✎`:""}`:"Se guarda solo en este celular";
   const pc=estadoPC();
-  if(p)t+=` · <span class="pend">${p} sin enviar</span>`;
+  if(nubeActiva())t+=nube.estado=="subiendo"?" · ☁ subiendo…":nube.estado=="error"?` · <span class="pend">⚠ sin sincronizar (${nube.err})</span>`:" · ☁ sincronizado";
+  if(nubeActiva()&&p==0);else if(p)t+=` · <span class="pend">${p} sin enviar</span>`;
   else if(enviado.t)t+=pc=="si"?` · <span class="ok-pc">✓ aplicado en PC</span>`:` · enviado ${hace(enviado.t)}`;
   $("guard").innerHTML=t;$("benv").style.display=h||e?"":"none";$("benv").classList.toggle("urg",p>=20);
-  $("ned").textContent=p?p+" sin enviar":enviado.t?"todo enviado":"";}
+  $("ned").textContent=p?p+" sin enviar":enviado.t?"todo enviado":"";
+  if($("lgh"))$("lgh").textContent=nubeActiva()?"conectado ✓":"no conectado";}
 function guardarPref(){try{localStorage.setItem("fresas_mini",mini?"1":"0")}catch(e){}}
 const COLORES={"unripe":"#34c759","early-pink":"#ff8fd8","commercial-basic":"#ff9f0a","commercial-high":"#ff453a","overripe":"#bf5af2"};
 const EXTRA=["#64d2ff","#ffd60a","#0a84ff","#ffffff"];
@@ -495,7 +498,7 @@ function pasosEnvio(){
   return paso(h?"si":"","Guardado en este celular",h?`${Object.keys(marcas).length} fotos marcadas`:"")+
     paso(!enviado.t?"":p?"no":"si","Enviado",!enviado.t?"Todavía no se ha enviado":p?`${p} cambios nuevos sin enviar · último envío ${hace(enviado.t)}`:`${hace(enviado.t)} · revision_${LOTE}.json`)+
     paso(pc=="si"?"si":enviado.t?"no":"","Aplicado en la PC",pc=="si"?`${a.fotos} fotos${a.cajas?`, ${a.cajas} con cajas corregidas`:""} · ${new Date(a.aplicado_fecha).toLocaleString()}`:
-      enviado.t?`En la PC: <code>--aplicar revision_${LOTE}.json</code> y luego <code>git push</code>`:"");
+      enviado.t?(nubeActiva()?`En la PC: <code>--aplicar github</code> y luego <code>git push</code>`:`En la PC: <code>--aplicar revision_${LOTE}.json</code> y luego <code>git push</code>`):"");
 }
 function abrirEnvio(tit,sub,pct,err){$("envio").classList.add("on");$("etit").textContent=tit;$("esub").textContent=sub;
   $("ebarra").classList.toggle("err",!!err);$("ebar").style.width=pct+"%";}
@@ -506,12 +509,13 @@ function verEstadoEnvio(){if(!Object.keys(marcas).length&&!Object.keys(ediciones
   $("epasos").innerHTML=pasosEnvio();$("eres").innerHTML=enviado.resumen?htmlResumen(enviado.resumen):"";
   $("eacc").innerHTML=(p?`<button class="prim" onclick="enviar()">Enviar ahora</button>`:"")+`<button onclick="cerrarEnvio()">Cerrar</button>`;}
 function enviar(){
+  if(nubeActiva()){hoja(false);$("epasos").innerHTML="";$("eacc").innerHTML="";$("eres").innerHTML=htmlResumen(datosActuales().resumen);
+    abrirEnvio("Sincronizando…","Guardando en GitHub",30);
+    sincronizar().then(ok=>{abrirEnvio(ok?"✓ Guardado en GitHub":"No se pudo sincronizar",ok?`rama «resultados», ${LOTE}.json · ${new Date().toLocaleTimeString()}`:nube.err,ok?(estadoPC()=="si"?100:66):100,!ok);
+      $("epasos").innerHTML=pasosEnvio();$("eacc").innerHTML=`<button class="prim" onclick="cerrarEnvio()">Listo</button>`;});return;}
   if(!Object.keys(marcas).length&&!Object.keys(ediciones).length){aviso("Todavía no hay nada que enviar");return;}
   if(enviando)return;enviando=true;hoja(false);
-  const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
-  const originales={};DATOS.forEach(d=>{if(d.orig in ediciones)originales[d.orig]=d.figs;});
-  const fecha=new Date().toISOString(),res=resumenDe(m,ediciones);
-  const datos={formato:2,lote:LOTE,fecha,marcas:m,correcciones:ediciones,originales,tiempos,rechazadas,descartadas};
+  const datos=datosActuales(),fecha=datos.fecha,res=datos.resumen;
   $("epasos").innerHTML="";$("eacc").innerHTML="";$("eres").innerHTML=htmlResumen(res);
   abrirEnvio("Enviando…","Preparando el archivo",8);
   setTimeout(()=>{abrirEnvio("Enviando…","Elige dónde enviarlo (WhatsApp, correo, Drive…)",45);
@@ -532,6 +536,11 @@ function enviar(){
 /* ---------- Sincronizar entre dispositivos (sin servidor) ----------
    Combina una revisión (archivo enviado desde otro dispositivo, o la ya aplicada en la PC y publicada)
    con la local. Por foto gana el cambio más reciente; las fotos que solo tiene un lado se agregan. */
+function datosActuales(){
+  const est={ok:"bien",mal:"mal",ev:"evaluar"},m={};for(const k in marcas)m[k]=est[marcas[k]];
+  const originales={};DATOS.forEach(d=>{if(d.orig in ediciones)originales[d.orig]=d.figs;});
+  return{formato:2,lote:LOTE,fecha:new Date().toISOString(),marcas:m,correcciones:JSON.parse(JSON.stringify(ediciones)),
+         originales,tiempos,rechazadas,descartadas,resumen:resumenDe(m,ediciones)};}
 function fusionarRevision(r,yaAplicada){
   if(!r||(r.lote&&r.lote!==LOTE))return 0;
   const inv={bien:"ok",mal:"mal",evaluar:"ev"},rt=r.tiempos||{},base=Date.parse(r.fecha)||0;let n=0;
@@ -548,6 +557,69 @@ function fusionarRevision(r,yaAplicada){
   for(const[o,l]of Object.entries(r.descartadas||{})){const a=descartadas[o]=descartadas[o]||[];l.forEach(i=>a.includes(i)||a.push(i));}
   if(yaAplicada){try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}}
   return n;}
+/* ---------- Sincronización automática con GitHub (rama «resultados», un archivo <lote>.json) ----------
+   El token lo ingresa la persona en cada dispositivo y queda solo en su navegador; la página no trae ninguno. */
+const GH=(()=>{const h=location.hostname.match(/^([^.]+)\.github\.io$/i),seg=location.pathname.split("/").filter(Boolean);
+  return h&&seg.length?{owner:h[1],repo:seg[0]}:null;})();
+const RAMA="resultados";let nube={token:"",sha:undefined,estado:"off",err:""},timerNube=0,subiendo=null;
+try{nube.token=localStorage.getItem("fresas_token")||""}catch(e){}
+function nubeActiva(){return !!(GH&&nube.token);}
+function api(ruta,op={}){return fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${ruta}`,{...op,cache:"no-store",
+  headers:{Authorization:"Bearer "+nube.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(op.body?{"Content-Type":"application/json"}:{})}});}
+const b64a=t=>btoa(unescape(encodeURIComponent(t))),a64b=b=>decodeURIComponent(escape(atob(b.replace(/\s/g,""))));
+function errGH(r){return new Error(r.status==401?"token inválido o vencido":r.status==403||r.status==404?"el token no tiene permiso":"GitHub "+r.status);}
+async function leerNube(nombre){
+  const r=await api(`/contents/${encodeURIComponent(nombre)}?ref=${RAMA}`);if(r.status==404)return null;if(!r.ok)throw errGH(r);
+  const j=await r.json();let txt=j.content&&j.encoding=="base64"?a64b(j.content):null;
+  if(txt===null){const b=await api(`/git/blobs/${j.sha}`);if(!b.ok)throw errGH(b);txt=a64b((await b.json()).content);}
+  return{sha:j.sha,datos:JSON.parse(txt)};}
+async function asegurarRama(){
+  const r=await api(`/git/ref/heads/${RAMA}`);if(r.ok)return;if(r.status!=404)throw errGH(r);
+  const t=await api("/git/trees",{method:"POST",body:JSON.stringify({tree:[{path:"LEEME.md",mode:"100644",type:"blob",
+    content:"Revisión hecha desde la página (un archivo por lote). La escribe la página; en la PC: revisar_fresas.py --aplicar github\n"}]})});
+  if(!t.ok)throw errGH(t);
+  const c=await api("/git/commits",{method:"POST",body:JSON.stringify({message:"Crear rama de resultados",tree:(await t.json()).sha,parents:[]})});
+  if(!c.ok)throw errGH(c);
+  const f=await api("/git/refs",{method:"POST",body:JSON.stringify({ref:"refs/heads/"+RAMA,sha:(await c.json()).sha})});
+  if(!f.ok&&f.status!=422)throw errGH(f);}
+function programarSubida(ms){if(!nubeActiva())return;clearTimeout(timerNube);timerNube=setTimeout(()=>sincronizar(),ms??3000);}
+/* trae lo de GitHub (otro dispositivo), combina (gana lo más reciente por foto) y sube el resultado */
+function sincronizar(){if(!nubeActiva())return Promise.resolve(false);if(subiendo)return subiendo.then(()=>sincronizar());
+  subiendo=(async()=>{nube.estado="subiendo";pintarEstado();
+    try{await asegurarRama();
+      for(let intento=0;intento<3;intento++){
+        const x=await leerNube(LOTE+".json");nube.sha=x?x.sha:undefined;
+        if(x&&fusionarRevision(x.datos,false)){guardarLocal();pintar();}
+        const d=datosActuales();
+        if(x&&JSON.stringify({m:x.datos.marcas,c:x.datos.correcciones})===JSON.stringify({m:d.marcas,c:d.correcciones})){registrarEnvioNube(d);break;}
+        const r=await api(`/contents/${encodeURIComponent(LOTE+".json")}`,{method:"PUT",body:JSON.stringify({
+          message:`Revisión ${LOTE}: ${d.resumen.fotos} fotos (${d.resumen.bien} bien, ${d.resumen.mal} mal, ${d.resumen.evaluar} evaluar)`,
+          content:b64a(JSON.stringify(d,null,1)),branch:RAMA,...(nube.sha?{sha:nube.sha}:{})})});
+        if(r.status==409||r.status==422)continue;          // otro dispositivo escribió justo ahora: releer y combinar
+        if(!r.ok)throw errGH(r);
+        nube.sha=(await r.json()).content.sha;registrarEnvioNube(d);break;}
+      nube.estado="ok";nube.err="";return true;
+    }catch(e){nube.estado="error";nube.err=e.message=="Failed to fetch"?"sin conexión":e.message;
+      clearTimeout(timerNube);timerNube=setTimeout(()=>sincronizar(),30000);return false;}
+    finally{subiendo=null;pintarEstado();}})();
+  return subiendo;}
+function guardarLocal(){try{localStorage.setItem(CLAVE,JSON.stringify(marcas));localStorage.setItem(CLAVE+"_ed",JSON.stringify(ediciones));
+  localStorage.setItem(CLAVE+"_desc",JSON.stringify(descartadas));localStorage.setItem(CLAVE+"_rech",JSON.stringify(rechazadas));
+  localStorage.setItem(CLAVE+"_t",JSON.stringify(tiempos));}catch(e){}}
+function registrarEnvioNube(d){enviado={marcas:JSON.parse(JSON.stringify(marcas)),ediciones:JSON.parse(JSON.stringify(ediciones)),
+  t:Date.now(),fecha:d.fecha,resumen:d.resumen};try{localStorage.setItem(CLAVE+"_env",JSON.stringify(enviado))}catch(e){}}
+async function conectarGitHub(){
+  if(!GH){alert("Solo funciona desde la página publicada en GitHub Pages.");return;}
+  if(nube.token){if(confirm("¿Dejar de sincronizar con GitHub en este dispositivo? (Lo ya subido queda en GitHub.)")){
+    nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}return;}
+  const t=(prompt("Pega tu token de GitHub (fine-grained, solo el repositorio "+GH.repo+", permiso «Contents: Read and write»). Se guarda solo en este dispositivo.")||"").trim();
+  if(!t)return;nube.token=t;try{localStorage.setItem("fresas_token",t)}catch(e){}
+  hoja(false);aviso("Conectando con GitHub…");
+  if(await sincronizar())aviso("✓ Sincronizado con GitHub");
+  else{alert("No se pudo conectar: "+nube.err+".");nube.token="";nube.estado="off";try{localStorage.removeItem("fresas_token")}catch(e){}pintarEstado();}}
+window.addEventListener("online",()=>{if(nube.estado=="error")sincronizar();});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")programarSubida(300);else if(nubeActiva()&&sinEnviar())sincronizar();});
+if(nubeActiva())programarSubida(200);
 function importar(input){
   const f=input.files&&input.files[0];input.value="";if(!f)return;
   f.text().then(t=>{let r;try{r=JSON.parse(t)}catch(e){alert("El archivo no es una revisión válida.");return;}
@@ -1065,6 +1137,43 @@ def registrar_aplicado(salida, lote, datos, cajas):
           f'    git add -A; git commit -m "Aplicado {lote}"; git push')
 
 
+def aplicar_github(origen, salida):
+    """Trae de la rama «resultados» (donde sincroniza la página) cada <lote>.json y lo aplica."""
+    import subprocess
+    repo = Path(__file__).resolve().parent
+
+    def git(*args):
+        r = subprocess.run(["git", *args], cwd=repo, capture_output=True)
+        if r.returncode:
+            raise RuntimeError(r.stderr.decode("utf-8", "replace").strip())
+        return r.stdout.decode("utf-8")
+    try:
+        git("fetch", "-q", "origin", "resultados")
+    except RuntimeError:
+        sys.exit("Todavía no hay nada sincronizado en GitHub (no existe la rama «resultados»).")
+    try:
+        registro = json.loads((salida / "aplicados.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        registro = {}
+    nombres = [n for n in git("ls-tree", "--name-only", "origin/resultados").split() if n.endswith(".json")]
+    destino = repo / "feedback"
+    destino.mkdir(exist_ok=True)
+    aplicados = 0
+    for n in sorted(nombres):
+        datos = json.loads(git("show", f"origin/resultados:{n}"))
+        lote = datos.get("lote", Path(n).stem)
+        if datos.get("fecha", "") <= registro.get(lote, {}).get("envio_fecha", ""):
+            print(f"{lote}: sin cambios desde la última vez")
+            continue
+        archivo = destino / f"revision_{lote}.json"
+        archivo.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"\n== {lote} ==")
+        aplicar_correcciones(origen, archivo, salida)
+        aplicados += 1
+    if aplicados:
+        print('\nListo. Sube la confirmación: git add -A; git commit -m "Aplicado desde GitHub"; git push')
+
+
 def respaldo(archivo):
     bak = archivo.with_name(archivo.name + ".bak")
     if not bak.exists():
@@ -1085,7 +1194,7 @@ def main():
     ap.add_argument("--prefijo", default=None,
                     help="nombre de los lotes (por defecto «lote», o el nombre del archivo de --lista)")
     ap.add_argument("--aplicar", metavar="JSON",
-                    help="aplicar revision_lote_XX.json enviado desde el celular")
+                    help="aplicar revision_lote_XX.json enviado desde el celular, o «github» para traer lo sincronizado")
     ap.add_argument("--feedback", metavar="JSON", nargs="+",
                     help="aprender tus criterios de revision_lote_XX.json ya aplicados (escribe feedback/criterios.json)")
     ap.add_argument("--max-lado", type=int, default=1280, help="tamaño máx. de las copias")
@@ -1098,7 +1207,9 @@ def main():
     if a.feedback:
         aprender_criterios(a.raiz / (a.carpeta or "."), a.feedback, ruta_criterios)
         return
-    if a.aplicar:
+    if a.aplicar == "github":
+        aplicar_github(a.raiz / (a.carpeta or "."), a.salida)
+    elif a.aplicar:
         aplicar_correcciones(a.raiz / (a.carpeta or "."), a.aplicar, a.salida)
     elif a.carpeta is None:
         listar_carpetas(a.raiz)
