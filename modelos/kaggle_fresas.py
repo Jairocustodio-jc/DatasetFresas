@@ -142,11 +142,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--siguiente", required=True, help="lote donde escribir las sugerencias, p. ej. lote_06")
     ap.add_argument("--epochs", type=int, default=40)
-    ap.add_argument("--device", default="0", help="0 = GPU de Kaggle; cpu para probar")
+    ap.add_argument("--device", default="auto", help="auto (GPU si hay), 0 = GPU, cpu")
     ap.add_argument("--salida", default="/kaggle/working/salida")
     ap.add_argument("--push", action="store_true", help="subir a GitHub con el secreto GITHUB_TOKEN de Kaggle")
     a = ap.parse_args()
     from ultralytics import YOLO
+    import torch
+    if a.device == "auto":
+        a.device = "0" if torch.cuda.is_available() else "cpu"
+    if a.device == "cpu":
+        print("⚠ No hay GPU: el entrenamiento irá en CPU y puede tardar 2-3 horas.\n"
+              "  En Kaggle: Settings → Accelerator → GPU (requiere cuenta verificada con teléfono) y reinicia la sesión.")
+    else:
+        print("GPU:", torch.cuda.get_device_name(0))
     rev = revisiones()
     print("Lotes revisados:", ", ".join(sorted(rev)))
     n = armar_dataset(rev, Path("/tmp/ds_fresas"))
