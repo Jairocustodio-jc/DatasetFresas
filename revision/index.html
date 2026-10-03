@@ -15,9 +15,9 @@ h2{font-size:13px;font-weight:600;color:#8a8a90;text-transform:uppercase;letter-
 p{color:#8a8a90;font-size:13px;margin:18px 4px}
 </style></head><body><h1>Revisión de fresas</h1><div id="l"></div>
 <p id="sync">Lo que revisas se guarda en este dispositivo. Para verlo también en otro, activa en un lote: ⋯ → Sincronizar con GitHub.</p>
-<p style="font-size:11px">Versión de la página: 28/09 12:27</p>
+<p style="font-size:11px">Versión de la página: 03/10 05:11</p>
 <script>
-const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"], ["lote_04", 300, "Lote 4", "lote"], ["lote_05", 300, "Lote 5", "lote"], ["lote_06", 300, "Lote 6", "lote"], ["lote_07", 300, "Lote 7", "lote"], ["lote_08", 300, "Lote 8", "lote"], ["lote_09", 300, "Lote 9", "lote"], ["lote_10", 300, "Lote 10", "lote"]];let APL={};
+const LOTES=[["lote_01", 300, "Lote 1", "lote"], ["lote_02", 300, "Lote 2", "lote"], ["lote_03", 300, "Lote 3", "lote"], ["lote_04", 300, "Lote 4", "lote"], ["lote_05", 300, "Lote 5", "lote"], ["lote_06", 300, "Lote 6", "lote"], ["lote_07", 300, "Lote 7", "lote"], ["lote_08", 300, "Lote 8", "lote"], ["lote_09", 300, "Lote 9", "lote"], ["lote_10", 300, "Lote 10", "lote"], ["lote_11", 99, "Lote 11", "lote"]];let APL={};
 function pintarIndice(){
 let grupo=null;
 document.getElementById("l").innerHTML=LOTES.map(([n,t,titulo,g])=>{const cab=g!==grupo&&LOTES.some(x=>x[3]!==g)?`<h2>${g=="lote"?"En orden":g.replace(/_/g," ")}</h2>`:"";grupo=g;let m={},ed={},env={};try{m=JSON.parse(localStorage.getItem("fresas_"+n)||"{}");ed=JSON.parse(localStorage.getItem("fresas_"+n+"_ed")||"{}");env=JSON.parse(localStorage.getItem("fresas_"+n+"_env")||"{}")}catch(e){}
