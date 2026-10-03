@@ -5,11 +5,11 @@ En una celda de un notebook de Kaggle (Settings → Accelerator: GPU, Internet: 
     !pip -q install ultralytics
     !git clone -q -b claude/jolly-heisenberg-qa6cj9 https://github.com/Jairocustodio-jc/DatasetFresas
     %cd DatasetFresas
-    !python modelos/kaggle_fresas.py --siguiente lote_06
+    !python modelos/kaggle_fresas.py --siguiente restantes
 
 Toma como «revisados» todos los lotes que tengan revisión en feedback/revision_<lote>.json o en la rama
 «resultados» (lo que sincroniza la página). Al terminar deja en /kaggle/working/salida/:
-    revision/<siguiente>/index.html   (la página del lote con las sugerencias)
+    revision/<lote>/index.html        (la página de cada lote con sus sugerencias)
     modelos/yolo_fresas_<N>lotes.pt   (el modelo nuevo)
 Cópialos al repo en tu PC (misma ruta) y haz git push. Con --push lo sube solo, si guardas tu token de GitHub en
 Kaggle → Add-ons → Secrets con el nombre GITHUB_TOKEN (permiso Contents: Read and write sobre el repo).
@@ -140,7 +140,8 @@ def sugerir(modelo, lote):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--siguiente", required=True, help="lote donde escribir las sugerencias, p. ej. lote_06")
+    ap.add_argument("--siguiente", required=True, nargs="+",
+                    help="lotes donde escribir sugerencias (p. ej. lote_06 lote_07) o «restantes» = todos los no revisados")
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--device", default="auto", help="auto (GPU si hay), 0 = GPU, cpu")
     ap.add_argument("--salida", default="/kaggle/working/salida")
@@ -157,6 +158,12 @@ def main():
         print("GPU:", torch.cuda.get_device_name(0))
     rev = revisiones()
     print("Lotes revisados:", ", ".join(sorted(rev)))
+    if a.siguiente == ["restantes"]:
+        lotes = sorted(d.name for d in (REPO / "revision").glob("lote_*")
+                       if (d / "index.html").exists() and d.name not in rev)
+    else:
+        lotes = a.siguiente
+    print("Sugerencias para:", ", ".join(lotes) or "(ninguno)")
     n = armar_dataset(rev, Path("/tmp/ds_fresas"))
     print(f"{n} fotos revisadas para entrenar")
     base = sorted((REPO / "modelos").glob("yolo_fresas_*.pt"), key=lambda p: p.stat().st_mtime)[-1]
@@ -166,9 +173,11 @@ def main():
                           fliplr=0.5, hsv_h=0.0, hsv_s=0.3, hsv_v=0.3, lr0=0.005)
     nuevo = REPO / "modelos" / f"yolo_fresas_{len(rev)}lotes.pt"
     shutil.copy("/tmp/runs/fresas/weights/best.pt", nuevo)
-    sugerir(str(nuevo), a.siguiente)
+    for lote in lotes:
+        sugerir(str(nuevo), lote)
     sal = Path(a.salida)
-    for rel in (f"revision/{a.siguiente}/index.html", f"modelos/{nuevo.name}"):
+    archivos = [f"revision/{l}/index.html" for l in lotes] + [f"modelos/{nuevo.name}"]
+    for rel in archivos:
         (sal / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(REPO / rel, sal / rel)
     print("Listo. Archivos en", sal)
@@ -177,8 +186,8 @@ def main():
         tok = UserSecretsClient().get_secret("GITHUB_TOKEN")
         git("config", "user.email", "kaggle@fresas")
         git("config", "user.name", "Kaggle fresas")
-        git("add", f"revision/{a.siguiente}/index.html", f"modelos/{nuevo.name}")
-        git("commit", "-m", f"{a.siguiente} con sugerencias (YOLO reentrenado en Kaggle con {len(rev)} lotes)")
+        git("add", *archivos)
+        git("commit", "-m", f"{', '.join(lotes)} con sugerencias (YOLO reentrenado en Kaggle con {len(rev)} lotes)")
         print(git("push", f"https://x-access-token:{tok}@github.com/Jairocustodio-jc/DatasetFresas.git",
                   "HEAD:claude/jolly-heisenberg-qa6cj9") or "Subido a GitHub.")
 
