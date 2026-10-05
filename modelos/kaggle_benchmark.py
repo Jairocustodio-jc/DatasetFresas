@@ -15,12 +15,14 @@ Qué compara (mismas condiciones para todos):
   - grande: yolov8x yolov9e yolov10x yolo11x yolo12x yolo26x   (v9 no tiene «x»: su mayor es «e»)
   - parten de los pesos COCO oficiales; misma partición para todos: 70 % train, 15 % validación, 15 % test, estratificada a la
     vez por estado (cada parte con casi el mismo % de cajas de cada estado) y por lote; semilla 0; se guarda en particion.json;
+  - experimentos con yolo11n (después de los nano, antes de los grandes): aumento de tono hsv_h 0,015 y/o 1024 px, para
+    ver si el tono engaña a la red (esta variedad va de rosa a rojo con la misma madurez) y si más resolución ayuda;
   - commercial-basic y commercial-high son las clases que más importan: en train sus fotos se repiten (--sobremuestreo 2) y
     la pérdida pesa más las clases escasas (--cls-pw 0.5); la tabla se ordena por «acierto comercial» (% de cajas comerciales
     del test bien detectadas y clasificadas) y muestra el «error crítico» (% que llamó early-pink u overripe) y a qué se
     predice cada caja comercial;
   - la validación elige la mejor época; el test se evalúa una sola vez al final con el mejor peso, y es lo que ordena la tabla;
-  - imgsz 640, 100 épocas como máximo, paciencia 20, AdamW lr0 0,001, hsv_h 0 (el color define la clase), semilla 0;
+  - imgsz 640, 100 épocas como máximo, paciencia 20, AdamW lr0 0,001, hsv_h 0 salvo en los experimentos, semilla 0;
   - batch 16 en nano y 8 en grande (memoria de la T4); nbs=64 acumula gradientes, así que el lote efectivo es el mismo.
 
 Cómo cuida el tiempo y los resultados:
@@ -49,7 +51,15 @@ GH = "Jairocustodio-jc/DatasetFresas"
 RAMA = "yolo-benchmark"
 NANO = ["yolov8n", "yolov9t", "yolov10n", "yolo11n", "yolo12n", "yolo26n"]
 GRANDE = ["yolov9e", "yolo12x", "yolov8x", "yolov10x", "yolo11x", "yolo26x"]   # los más pesados primero
-PESO = {m: 1 for m in NANO} | {m: 6 for m in GRANDE}
+# Experimentos con yolo11n: ¿el tono engaña a la red? (hsv_h 0,015 la obliga a mirar patrón, aquenios y brillo en vez del
+# tono exacto) ¿la resolución ayuda? (1024 px conserva aquenios y brillo). La base (hsv_h 0, 640 px) es «yolo11n».
+EXPER = ["yolo11n-hsv", "yolo11n-1024", "yolo11n-hsv-1024"]
+PESO = {m: 1 for m in NANO} | {"yolo11n-hsv": 1, "yolo11n-1024": 2.5, "yolo11n-hsv-1024": 2.5} | {m: 6 for m in GRANDE}
+
+
+def ajustes(m):
+    """Peso base, tamaño de imagen y aumento de tono de cada entrada de la cola."""
+    return m.split("-")[0], (1024 if "1024" in m else 640), (0.015 if "hsv" in m else 0.0)
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "modelos"))
 
@@ -198,7 +208,8 @@ def worker(a):
 
 def entrenar(m, a, sal, tope, fin, gpu, YOLO):
     grande = m in GRANDE
-    batch = 8 if grande else 16
+    base, imgsz, hsv_h = ajustes(m)
+    batch = 8 if grande or imgsz > 640 else 16
     t0 = time.time()
     log(f"[GPU {a.gpu}] {m}: empieza (tope {tope/3600:.1f} h, batch {batch})")
     parado = {"tiempo": False}
@@ -208,15 +219,16 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             parado["tiempo"] = True
             tr.stop = True
 
-    res = {"modelo": m, "tamaño": "grande" if grande else "nano", "gpu": gpu, "epochs_max": a.epochs}
+    res = {"modelo": m, "tamaño": "grande" if grande else "nano", "gpu": gpu, "epochs_max": a.epochs,
+           "imgsz": imgsz, "hsv_h": hsv_h}
     for intento in range(3):
         try:
-            modelo = YOLO(f"{m}.pt")
+            modelo = YOLO(f"{base}.pt")
             modelo.add_callback("on_fit_epoch_end", por_tiempo)
-            modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=640, batch=batch, device=a.dev,
+            modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=imgsz, batch=batch, device=a.dev,
                          optimizer="AdamW", lr0=0.001, nbs=64, seed=0, deterministic=True, workers=a.workers,
                          cache="ram", project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
-                         fliplr=0.5, hsv_h=0.0, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=a.cls_pw)
+                         fliplr=0.5, hsv_h=hsv_h, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=a.cls_pw)
             break
         except Exception as e:
             oom = "out of memory" in str(e).lower()
@@ -241,7 +253,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
     try:   # evaluación final del mejor peso, igual para todos
         mb = YOLO(str(best))
         for sp, pre in (("val", "val_"), ("test", "")):   # test: fotos que ningún modelo vio ni usó para elegir época
-            v = mb.val(data=a.data, split=sp, imgsz=640, batch=8, device=a.dev, plots=True, verbose=False,
+            v = mb.val(data=a.data, split=sp, imgsz=imgsz, batch=8, device=a.dev, plots=True, verbose=False,
                        project=str(run), name=sp, exist_ok=True)
             res |= {pre + "map50": round(float(v.box.map50), 4), pre + "map50_95": round(float(v.box.map), 4),
                     pre + "precision": round(float(v.box.mp), 4), pre + "recall": round(float(v.box.mr), 4),
@@ -397,7 +409,7 @@ def resumen(sal, modelos, info):
         if r is None:
             r = {"modelo": m, "estado": "entrenando" if (sal / "claims" / f"{m}.lock").exists() else "pendiente"}
         filas.append(r)
-    cols = ["modelo", "tamaño", "estado", "acierto_comercial", "error_critico", "map50", "map50_95", "precision", "recall", "val_map50", "val_map50_95",
+    cols = ["modelo", "tamaño", "imgsz", "hsv_h", "estado", "acierto_comercial", "error_critico", "map50", "map50_95", "precision", "recall", "val_map50", "val_map50_95",
             "epochs_hechas", "mejor_epoch",
             "parado_por_tiempo", "minutos", "batch", "params_M", "gflops", "inferencia_ms", "peso_MB", "gpu", "error"]
     with open(sal / "resumen.csv", "w", newline="", encoding="utf-8") as f:
@@ -439,6 +451,15 @@ def resumen(sal, modelos, info):
             for c, d in (r.get("confusion_comercial") or {}).items():
                 t.append(f"| {r['modelo']} | {c} | {d['cajas']} | {d['bien']} | **{d['early-pink']}** | **{d['overripe']}** "
                          f"| {d['otra_comercial']} | {d['unripe']} | {d['no_detectada']} |")
+    exp = {r["modelo"]: r for r in ok if r["modelo"] == "yolo11n" or r["modelo"] in EXPER}
+    if len(exp) > 1:
+        t += ["", "**Experimentos con yolo11n: aumento de tono y resolución** (mismo test)", "",
+              "| Variante | hsv_h | imgsz | Acierto com. | Error crítico | mAP50-95 | ms/img |", "|---|---|---|---|---|---|---|"]
+        for m in ["yolo11n"] + EXPER:
+            if m in exp:
+                r = exp[m]
+                t.append(f"| {m} | {r.get('hsv_h', 0.0)} | {r.get('imgsz', 640)} | {r.get('acierto_comercial')} % "
+                         f"| {r.get('error_critico')} % | {r['map50_95']:.3f} | {r.get('inferencia_ms', '')} |")
     otros = [r for r in filas if r.get("map50_95") is None]
     if otros:
         t += ["", "**Sin resultado todavía**", ""] + [f"- {r['modelo']}: {r.get('estado')}"
@@ -455,7 +476,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--horas", type=float, default=11.0, help="tiempo total (Kaggle corta a las 12 h)")
     ap.add_argument("--epochs", type=int, default=100)
-    ap.add_argument("--modelos", nargs="+", default=NANO + GRANDE)
+    ap.add_argument("--modelos", nargs="+", default=NANO + EXPER + GRANDE)
     ap.add_argument("--nombre", default=None, help="nombre de la corrida (por defecto «<N>lotes»); repetirlo retoma")
     ap.add_argument("--salida", default="/kaggle/working/benchmark")
     ap.add_argument("--sin-github", action="store_true", help="no subir nada (solo /kaggle/working)")
@@ -481,7 +502,7 @@ def main():
     fin = inicio + a.horas * 3600
     desconocidos = [m for m in a.modelos if m not in PESO]
     if desconocidos:
-        sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + GRANDE}")
+        sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + EXPER + GRANDE}")
     import torch
     n_gpu = torch.cuda.device_count()
     if n_gpu == 0:
