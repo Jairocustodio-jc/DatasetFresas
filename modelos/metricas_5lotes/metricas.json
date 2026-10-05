@@ -1,0 +1,228 @@
+{
+ "val_200": {
+  "fotos": 200,
+  "cajas": null,
+  "P": 0.778,
+  "R": 0.835,
+  "mAP50": 0.88,
+  "mAP50_95": 0.743,
+  "por_clase": {
+   "unripe": {
+    "P": 0.915,
+    "R": 0.969,
+    "AP50": 0.984,
+    "AP50_95": 0.754
+   },
+   "early-pink": {
+    "P": 0.825,
+    "R": 0.918,
+    "AP50": 0.947,
+    "AP50_95": 0.837
+   },
+   "commercial-basic": {
+    "P": 0.679,
+    "R": 0.634,
+    "AP50": 0.757,
+    "AP50_95": 0.675
+   },
+   "commercial-high": {
+    "P": 0.667,
+    "R": 0.767,
+    "AP50": 0.78,
+    "AP50_95": 0.676
+   },
+   "overripe": {
+    "P": 0.806,
+    "R": 0.889,
+    "AP50": 0.929,
+    "AP50_95": 0.773
+   }
+  },
+  "ms_cpu": 41.1,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 40,
+    "bien": 52.5,
+    "early-pink": 20.0,
+    "overripe": 0.0,
+    "otra_comercial": 27.5,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 73,
+    "bien": 68.5,
+    "early-pink": 1.4,
+    "overripe": 20.5,
+    "otra_comercial": 8.2,
+    "unripe": 0.0,
+    "no_detectada": 1.4
+   }
+  },
+  "error_critico": 21.2,
+  "acierto_comercial": 62.8,
+  "matriz": [
+   [
+    662,
+    5,
+    0,
+    0,
+    0,
+    108
+   ],
+   [
+    1,
+    62,
+    8,
+    1,
+    0,
+    18
+   ],
+   [
+    0,
+    3,
+    21,
+    6,
+    0,
+    26
+   ],
+   [
+    0,
+    2,
+    11,
+    50,
+    12,
+    21
+   ],
+   [
+    0,
+    0,
+    0,
+    15,
+    121,
+    31
+   ],
+   [
+    11,
+    1,
+    0,
+    1,
+    7,
+    0
+   ]
+  ]
+ },
+ "lote6_76": {
+  "fotos": 76,
+  "cajas": null,
+  "P": 0.778,
+  "R": 0.85,
+  "mAP50": 0.856,
+  "mAP50_95": 0.726,
+  "por_clase": {
+   "unripe": {
+    "P": 0.876,
+    "R": 0.948,
+    "AP50": 0.957,
+    "AP50_95": 0.753
+   },
+   "early-pink": {
+    "P": 0.82,
+    "R": 0.829,
+    "AP50": 0.888,
+    "AP50_95": 0.767
+   },
+   "commercial-basic": {
+    "P": 0.453,
+    "R": 0.667,
+    "AP50": 0.529,
+    "AP50_95": 0.446
+   },
+   "commercial-high": {
+    "P": 0.881,
+    "R": 0.846,
+    "AP50": 0.92,
+    "AP50_95": 0.823
+   },
+   "overripe": {
+    "P": 0.862,
+    "R": 0.963,
+    "AP50": 0.986,
+    "AP50_95": 0.842
+   }
+  },
+  "ms_cpu": 44.0,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 15,
+    "bien": 60.0,
+    "early-pink": 20.0,
+    "overripe": 0.0,
+    "otra_comercial": 20.0,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 35,
+    "bien": 82.9,
+    "early-pink": 0.0,
+    "overripe": 5.7,
+    "otra_comercial": 11.4,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "error_critico": 10.0,
+  "acierto_comercial": 76.0,
+  "matriz": [
+   [
+    244,
+    5,
+    0,
+    0,
+    0,
+    44
+   ],
+   [
+    1,
+    25,
+    3,
+    0,
+    0,
+    9
+   ],
+   [
+    0,
+    3,
+    9,
+    4,
+    0,
+    12
+   ],
+   [
+    0,
+    0,
+    3,
+    29,
+    2,
+    8
+   ],
+   [
+    0,
+    0,
+    0,
+    2,
+    49,
+    8
+   ],
+   [
+    6,
+    2,
+    0,
+    0,
+    1,
+    0
+   ]
+  ]
+ }
+}
