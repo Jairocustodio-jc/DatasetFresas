@@ -1,0 +1,160 @@
+{
+ "yolov8n": {
+  "acierto_top1": 63.8,
+  "critico_top1": 19.1,
+  "cajas_con_2_clases": 68,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 27,
+    "commercial-high": 16,
+    "early-pink": 8
+   },
+   "commercial-high": {
+    "commercial-high": 70,
+    "overripe": 21,
+    "commercial-basic": 10
+   }
+  }
+ },
+ "yolo26n": {
+  "acierto_top1": 77.0,
+  "critico_top1": 7.9,
+  "cajas_con_2_clases": 47,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 43,
+    "commercial-high": 6,
+    "early-pink": 2
+   },
+   "commercial-high": {
+    "commercial-high": 74,
+    "overripe": 10,
+    "commercial-basic": 17
+   }
+  }
+ },
+ "yolov9t": {
+  "acierto_top1": 69.1,
+  "critico_top1": 15.8,
+  "cajas_con_2_clases": 39,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 40,
+    "commercial-high": 9,
+    "early-pink": 2
+   },
+   "commercial-high": {
+    "commercial-high": 65,
+    "overripe": 21,
+    "commercial-basic": 14,
+    "early-pink": 1
+   }
+  }
+ },
+ "yolov10n": {
+  "acierto_top1": 73.0,
+  "critico_top1": 11.2,
+  "cajas_con_2_clases": 54,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 34,
+    "commercial-high": 10,
+    "early-pink": 7
+   },
+   "commercial-high": {
+    "commercial-high": 77,
+    "overripe": 10,
+    "commercial-basic": 14
+   }
+  }
+ },
+ "yolo11n": {
+  "acierto_top1": 72.4,
+  "critico_top1": 14.5,
+  "cajas_con_2_clases": 115,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 39,
+    "commercial-high": 7,
+    "early-pink": 5
+   },
+   "commercial-high": {
+    "commercial-high": 71,
+    "overripe": 16,
+    "commercial-basic": 13,
+    "early-pink": 1
+   }
+  }
+ },
+ "yolo12n": {
+  "acierto_top1": 72.4,
+  "critico_top1": 13.8,
+  "cajas_con_2_clases": 56,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 39,
+    "commercial-high": 9,
+    "early-pink": 3
+   },
+   "commercial-high": {
+    "commercial-high": 71,
+    "overripe": 17,
+    "commercial-basic": 12,
+    "early-pink": 1
+   }
+  }
+ },
+ "yolo11n-hsv": {
+  "acierto_top1": 71.7,
+  "critico_top1": 13.8,
+  "cajas_con_2_clases": 80,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 38,
+    "commercial-high": 8,
+    "early-pink": 5
+   },
+   "commercial-high": {
+    "commercial-high": 71,
+    "overripe": 16,
+    "commercial-basic": 14
+   }
+  }
+ },
+ "yolo11n-1024": {
+  "acierto_top1": 75.7,
+  "critico_top1": 10.5,
+  "cajas_con_2_clases": 73,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 35,
+    "commercial-high": 15,
+    "early-pink": 1
+   },
+   "commercial-high": {
+    "commercial-high": 80,
+    "overripe": 14,
+    "commercial-basic": 6,
+    "early-pink": 1
+   }
+  }
+ },
+ "yolo11n-hsv-1024": {
+  "acierto_top1": 78.9,
+  "critico_top1": 6.6,
+  "cajas_con_2_clases": 59,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 38,
+    "commercial-high": 11,
+    "early-pink": 2
+   },
+   "commercial-high": {
+    "commercial-high": 82,
+    "overripe": 7,
+    "commercial-basic": 11,
+    "early-pink": 1
+   }
+  }
+ }
+}

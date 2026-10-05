@@ -260,7 +260,9 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
                     pre + "ap50_por_clase": {v.names[int(c)]: round(float(x), 4)
                                              for c, x in zip(v.box.ap_class_index, v.box.ap50)}}
             if sp == "test":
-                res |= confusion_comercial(v.confusion_matrix.matrix, v.names)
+                cm = confusion_comercial(v.confusion_matrix.matrix, v.names)   # referencia (matriz de Ultralytics)
+                res |= {"acierto_comercial_cm": cm.get("acierto_comercial"), "error_critico_cm": cm.get("error_critico")}
+                res |= comercial_top1(mb, Path(a.data).parent, imgsz, a.dev)       # la métrica principal
         res["inferencia_ms"] = round(float(v.speed.get("inference", 0)), 2)
         from ultralytics.utils.torch_utils import get_flops, get_num_params
         res |= {"params_M": round(get_num_params(mb.model) / 1e6, 2), "gflops": round(float(get_flops(mb.model, 640)), 1)}
@@ -297,6 +299,42 @@ def confusion_comercial(mat, names):
         tot += n
     return {"confusion_comercial": out, "error_critico": round(100 * crit / tot, 1) if tot else None,
             "acierto_comercial": round(sum(out[c]["bien"] * out[c]["cajas"] for c in out) / tot, 1) if tot else None}
+
+
+def comercial_top1(mb, ds, imgsz, dev):
+    """Por cada caja real comercial del test, la predicción MÁS SEGURA que la cubre (IoU ≥ 0,5, cualquier clase,
+    confianza ≥ 0,25): es lo que haría el equipo en el campo. La matriz de Ultralytics, en cambio, empareja por IoU y
+    puede quedarse con una segunda clase de baja confianza sobre la misma fresa, lo que subestima el acierto."""
+    from kaggle_fresas import ORD, iou
+    conf = {c: {} for c in COMERCIAL}
+    for p in sorted((ds / "images" / "test").iterdir()):
+        r = mb.predict(str(p), imgsz=imgsz, conf=0.25, device=dev, verbose=False)[0]
+        W, H = r.orig_shape[1], r.orig_shape[0]
+        pr = [([b[0]/W, b[1]/H, b[2]/W, b[3]/H], int(c), float(x)) for b, c, x in
+              zip(r.boxes.xyxy.tolist(), r.boxes.cls.tolist(), r.boxes.conf.tolist())]
+        for l in (ds / "labels" / "test" / f"{p.stem}.txt").read_text().split("\n"):
+            if not l.strip():
+                continue
+            c, x, y, w, h = map(float, l.split())
+            if ORD[int(c)] not in COMERCIAL:
+                continue
+            cand = [q for q in pr if iou([x-w/2, y-h/2, x+w/2, y+h/2], q[0]) >= 0.5]
+            pred = ORD[max(cand, key=lambda q: q[2])[1]] if cand else "no_detectada"
+            conf[ORD[int(c)]][pred] = conf[ORD[int(c)]].get(pred, 0) + 1
+    out = {}
+    for c, d in conf.items():
+        n = sum(d.values())
+        if n:
+            pct = lambda k: round(100 * d.get(k, 0) / n, 1)
+            out[c] = {"cajas": n, "bien": pct(c), "early-pink": pct("early-pink"), "overripe": pct("overripe"),
+                      "otra_comercial": pct([o for o in COMERCIAL if o != c][0]), "unripe": pct("unripe"),
+                      "no_detectada": pct("no_detectada")}
+    tot = sum(o["cajas"] for o in out.values())
+    if not tot:
+        return {}
+    return {"confusion_comercial": out,
+            "acierto_comercial": round(sum(o["bien"] * o["cajas"] for o in out.values()) / tot, 1),
+            "error_critico": round(sum((o["early-pink"] + o["overripe"]) * o["cajas"] for o in out.values()) / tot, 1)}
 
 
 # ───────────────────────────── respaldo en GitHub ─────────────────────────────
