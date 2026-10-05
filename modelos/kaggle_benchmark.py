@@ -15,6 +15,10 @@ Qué compara (mismas condiciones para todos):
   - grande: yolov8x yolov9e yolov10x yolo11x yolo12x yolo26x   (v9 no tiene «x»: su mayor es «e»)
   - parten de los pesos COCO oficiales; misma partición para todos: 70 % train, 15 % validación, 15 % test, estratificada a la
     vez por estado (cada parte con casi el mismo % de cajas de cada estado) y por lote; semilla 0; se guarda en particion.json;
+  - commercial-basic y commercial-high son las clases que más importan: en train sus fotos se repiten (--sobremuestreo 2) y
+    la pérdida pesa más las clases escasas (--cls-pw 0.5); la tabla se ordena por «acierto comercial» (% de cajas comerciales
+    del test bien detectadas y clasificadas) y muestra el «error crítico» (% que llamó early-pink u overripe) y a qué se
+    predice cada caja comercial;
   - la validación elige la mejor época; el test se evalúa una sola vez al final con el mejor peso, y es lo que ordena la tabla;
   - imgsz 640, 100 épocas como máximo, paciencia 20, AdamW lr0 0,001, hsv_h 0 (el color define la clase), semilla 0;
   - batch 16 en nano y 8 en grande (memoria de la T4); nbs=64 acumula gradientes, así que el lote efectivo es el mismo.
@@ -70,12 +74,16 @@ def escribir(p, d):
 
 # ───────────────────────── partición train / val / test ─────────────────────────
 
-def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0):
+COMERCIAL = ["commercial-basic", "commercial-high"]   # las clases que más importan: confundirlas sale caro
+
+
+def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0, sobremuestreo=2):
     """Reparte las fotos revisadas en train/val/test estratificando a la vez por clase (cajas de cada estado) y por lote.
 
     Estratificación iterativa (Sechidis et al., 2011): se reparte primero la etiqueta más escasa, cada foto va a la parte que
     más cajas de esa etiqueta le faltan para su porcentaje, y así cada parte queda con casi el mismo % de cada estado y de
-    cada lote. Devuelve la tabla de reparto (fotos y cajas por parte y por estado)."""
+    cada lote. Después, solo en train, las fotos con alguna caja comercial se repiten «sobremuestreo» veces (val y test
+    quedan intactos, para medir en la distribución real). Devuelve la tabla de reparto y las listas de fotos."""
     import random
     from kaggle_fresas import ORD, caja, datos
     random.seed(semilla)
@@ -125,12 +133,18 @@ def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0):
             lineas.append(f"{ORD.index(g['label'])} {(x1+x2)/2:.6f} {(y1+y2)/2:.6f} {x2-x1:.6f} {y2-y1:.6f}")
         (destino / "labels" / sp / f"{stem}.txt").write_text("\n".join(lineas) + "\n")
         listas[sp].append(f"{stem}.jpg")
+        if sp == "train" and any(g["label"] in COMERCIAL for g in f["figs"]):
+            for r in range(1, sobremuestreo):   # copias extra solo en train
+                shutil.copy(destino / "images" / sp / f"{stem}.jpg", destino / "images" / sp / f"{stem}_rep{r}.jpg")
+                shutil.copy(destino / "labels" / sp / f"{stem}.txt", destino / "labels" / sp / f"{stem}_rep{r}.txt")
     (destino / "data.yaml").write_text(f"path: {destino.resolve()}\ntrain: images/train\nval: images/val\n"
                                        f"test: images/test\nnames: {ORD}\n")
     tabla = {}
     for s, sp in enumerate(nombres):
         mis = [f for i, f in enumerate(fotos) if asign[i] == s]
-        tabla[sp] = {"fotos": len(mis), "cajas": {c: sum(f["v"][x] for f in mis) for x, c in enumerate(ORD)},
+        if sp == "train":
+            rep = sum(any(g["label"] in COMERCIAL for g in f["figs"]) for f in mis) * (sobremuestreo - 1)
+        tabla[sp] = {"fotos": len(mis), "copias_extra": rep if sp == "train" else 0, "cajas": {c: sum(f["v"][x] for f in mis) for x, c in enumerate(ORD)},
                      "por_lote": {l: sum(f["lote"] == l for f in mis) for l in lotes}}
     return tabla, {sp: sorted(v) for sp, v in listas.items()}
 
@@ -202,7 +216,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=640, batch=batch, device=a.dev,
                          optimizer="AdamW", lr0=0.001, nbs=64, seed=0, deterministic=True, workers=a.workers,
                          cache="ram", project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
-                         fliplr=0.5, hsv_h=0.0, hsv_s=0.3, hsv_v=0.3, amp=True)
+                         fliplr=0.5, hsv_h=0.0, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=a.cls_pw)
             break
         except Exception as e:
             oom = "out of memory" in str(e).lower()
@@ -233,6 +247,8 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
                     pre + "precision": round(float(v.box.mp), 4), pre + "recall": round(float(v.box.mr), 4),
                     pre + "ap50_por_clase": {v.names[int(c)]: round(float(x), 4)
                                              for c, x in zip(v.box.ap_class_index, v.box.ap50)}}
+            if sp == "test":
+                res |= confusion_comercial(v.confusion_matrix.matrix, v.names)
         res["inferencia_ms"] = round(float(v.speed.get("inference", 0)), 2)
         from ultralytics.utils.torch_utils import get_flops, get_num_params
         res |= {"params_M": round(get_num_params(mb.model) / 1e6, 2), "gflops": round(float(get_flops(mb.model, 640)), 1)}
@@ -246,6 +262,29 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
     escribir(sal / f"res_{m}.json", res)
     log(f"[GPU {a.gpu}] {m}: listo en {res['minutos']} min · mAP50 {res.get('map50')} · mAP50-95 {res.get('map50_95')}"
         + (" · parado por tiempo" if parado["tiempo"] else ""))
+
+
+def confusion_comercial(mat, names):
+    """De las cajas reales commercial-basic y commercial-high del test (confianza ≥ 0,25, IoU ≥ 0,45), a qué se predijeron.
+
+    error_critico = % de cajas comerciales que el modelo llamó early-pink u overripe (el error que más cuesta).
+    La matriz de Ultralytics es [predicho, real]; la última fila/columna es «fondo» (no detectada / falsa detección)."""
+    idx = {n: int(i) for i, n in names.items()}
+    nc = len(idx)
+    out, crit, tot = {}, 0, 0
+    for c in COMERCIAL:
+        col = mat[:, idx[c]]
+        n = float(col.sum())
+        if not n:
+            continue
+        pct = lambda x: round(100 * float(x) / n, 1)
+        out[c] = {"cajas": int(n), "bien": pct(col[idx[c]]), "early-pink": pct(col[idx["early-pink"]]),
+                  "overripe": pct(col[idx["overripe"]]), "otra_comercial": pct(sum(col[idx[o]] for o in COMERCIAL if o != c)),
+                  "unripe": pct(col[idx["unripe"]]), "no_detectada": pct(col[nc])}
+        crit += float(col[idx["early-pink"]] + col[idx["overripe"]])
+        tot += n
+    return {"confusion_comercial": out, "error_critico": round(100 * crit / tot, 1) if tot else None,
+            "acierto_comercial": round(sum(out[c]["bien"] * out[c]["cajas"] for c in out) / tot, 1) if tot else None}
 
 
 # ───────────────────────────── respaldo en GitHub ─────────────────────────────
@@ -358,33 +397,48 @@ def resumen(sal, modelos, info):
         if r is None:
             r = {"modelo": m, "estado": "entrenando" if (sal / "claims" / f"{m}.lock").exists() else "pendiente"}
         filas.append(r)
-    cols = ["modelo", "tamaño", "estado", "map50", "map50_95", "precision", "recall", "val_map50", "val_map50_95",
+    cols = ["modelo", "tamaño", "estado", "acierto_comercial", "error_critico", "map50", "map50_95", "precision", "recall", "val_map50", "val_map50_95",
             "epochs_hechas", "mejor_epoch",
             "parado_por_tiempo", "minutos", "batch", "params_M", "gflops", "inferencia_ms", "peso_MB", "gpu", "error"]
     with open(sal / "resumen.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         w.writerows(filas)
-    ok = sorted([r for r in filas if r.get("map50_95") is not None], key=lambda r: -r["map50_95"])
+    ok = sorted([r for r in filas if r.get("map50_95") is not None],
+                key=lambda r: (-(r.get("acierto_comercial") or 0), r.get("error_critico") or 0, -r["map50_95"]))
     clases = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
     t = [f"# Benchmark YOLO · {info['nombre']}", "",
          f"Actualizado {time.strftime('%d/%m/%Y %H:%M')} (hora de Kaggle, UTC). Lotes: {', '.join(info['lotes'])}. "
          f"{info['fotos']} fotos. GPU: {info['gpus']}.", "",
          "**Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):", "",
          *tabla_reparto(info["reparto"]), "",
-         "**Resultados en test** (fotos que ningún modelo vio al entrenar ni usó para elegir su mejor época); "
-         "ordenados por mAP50-95. La columna «val» es el mAP50-95 en validación.", "",
-         "| # | Modelo | mAP50-95 | mAP50 | P | R | val | Épocas | Min | Params (M) | GFLOPs | ms/img |",
-         "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+         f"En train, las fotos con cajas comerciales van repetidas ({info['reparto']['train'].get('copias_extra', 0)} "
+         f"copias extra) y la pérdida de clasificación pesa más las clases escasas (cls_pw {info.get('cls_pw')}). "
+         "Validación y test quedan con la distribución real.", "",
+         "**Resultados en test** (fotos que ningún modelo vio al entrenar ni usó para elegir su mejor época). "
+         "Ordenados por **acierto comercial** = % de cajas commercial-basic/high detectadas y con su estado correcto "
+         "(más es mejor); a igualdad, por menor **error crítico** = % que el modelo llamó early-pink u overripe "
+         "(menos es mejor; las no detectadas no cuentan aquí, ver la tabla de abajo). "
+         "«val» = mAP50-95 en validación.", "",
+         "| # | Modelo | Acierto com. | Error crítico | mAP50-95 | mAP50 | P | R | val | Épocas | Min | Params (M) | GFLOPs | ms/img |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(ok, 1):
         ep = f"{r.get('epochs_hechas')} (mejor {r.get('mejor_epoch')})" + (" ⏱" if r.get("parado_por_tiempo") else "")
-        t.append(f"| {i} | {r['modelo']} | {r['map50_95']:.3f} | {r['map50']:.3f} | {r['precision']:.2f} | {r['recall']:.2f} "
+        t.append(f"| {i} | {r['modelo']} | {r.get('acierto_comercial', '–')} % | {r.get('error_critico', '–')} % | {r['map50_95']:.3f} | {r['map50']:.3f} | {r['precision']:.2f} | {r['recall']:.2f} "
                  f"| {r.get('val_map50_95', '')} | {ep} | {r.get('minutos')} | {r.get('params_M', '')} | {r.get('gflops', '')} | {r.get('inferencia_ms', '')} |")
     if ok:
         t += ["", "**AP50 por clase (test)**", "", "| Modelo | " + " | ".join(clases) + " |", "|---" * (len(clases) + 1) + "|"]
         for r in ok:
             ap = r.get("ap50_por_clase", {})
             t.append(f"| {r['modelo']} | " + " | ".join(f"{ap[c]:.2f}" if c in ap else "–" for c in clases) + " |")
+    if ok:
+        t += ["", "**A qué se predicen las cajas comerciales del test** (% de las cajas reales de cada clase)", "",
+              "| Modelo | Clase real | Cajas | ✓ bien | → early-pink | → overripe | → la otra comercial | → unripe | no detectada |",
+              "|---|---|---|---|---|---|---|---|---|"]
+        for r in ok:
+            for c, d in (r.get("confusion_comercial") or {}).items():
+                t.append(f"| {r['modelo']} | {c} | {d['cajas']} | {d['bien']} | **{d['early-pink']}** | **{d['overripe']}** "
+                         f"| {d['otra_comercial']} | {d['unripe']} | {d['no_detectada']} |")
     otros = [r for r in filas if r.get("map50_95") is None]
     if otros:
         t += ["", "**Sin resultado todavía**", ""] + [f"- {r['modelo']}: {r.get('estado')}"
@@ -408,6 +462,10 @@ def main():
     ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token de GitHub")
     ap.add_argument("--partes", type=float, nargs=3, default=[0.70, 0.15, 0.15], metavar=("TRAIN", "VAL", "TEST"),
                     help="proporción de fotos para train, validación y test (por defecto 0.70 0.15 0.15)")
+    ap.add_argument("--sobremuestreo", type=int, default=2,
+                    help="veces que aparece en train cada foto con cajas comerciales (1 = sin repetir)")
+    ap.add_argument("--cls-pw", type=float, default=0.5,
+                    help="peso de clases escasas en la pérdida: 0 = igual, 1 = inverso de la frecuencia (por defecto 0.5)")
     # internos (proceso de cada GPU)
     ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--gpu", type=int, default=0, help=argparse.SUPPRESS)
@@ -435,9 +493,9 @@ def main():
     rev = revisiones()
     nombre = a.nombre or f"{len(rev)}lotes"
     ds = Path("/tmp/ds_fresas")
-    reparto, listas = particionar(rev, ds, a.partes)
+    reparto, listas = particionar(rev, ds, a.partes, sobremuestreo=a.sobremuestreo)
     import hashlib
-    huella = hashlib.sha1(json.dumps([a.partes, listas], sort_keys=True).encode()).hexdigest()[:12]
+    huella = hashlib.sha1(json.dumps([a.partes, a.sobremuestreo, a.cls_pw, listas], sort_keys=True).encode()).hexdigest()[:12]
     sal = Path(a.salida) / nombre
     (sal / "claims").mkdir(parents=True, exist_ok=True)
     (sal / "logs").mkdir(exist_ok=True)
@@ -451,7 +509,7 @@ def main():
 
     respaldo = Respaldo(sal, nombre, not a.sin_github, a.secreto, huella)
     n = sum(len(v) for v in listas.values())
-    info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "gpus": gpus, "reparto": reparto}
+    info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "gpus": gpus, "reparto": reparto, "cls_pw": a.cls_pw}
     escribir(sal / "config.json", info | {"modelos": a.modelos, "epochs": a.epochs, "horas": a.horas, "partes": a.partes,
                                           "huella_particion": huella, "inicio": time.strftime("%Y-%m-%d %H:%M")})
     escribir(sal / "particion.json", listas)
@@ -470,7 +528,7 @@ def main():
     def lanzar(g):
         cmd = [sys.executable, __file__, "--worker", "--gpu", str(g), "--n-gpu", str(n_gpu), "--deadline", str(fin),
                "--data", datas[g], "--salida", str(sal), "--epochs", str(a.epochs),
-               "--workers", str(max(2, (os.cpu_count() or 4) // n_gpu)), "--modelos", *a.modelos]
+               "--workers", str(max(2, (os.cpu_count() or 4) // n_gpu)), "--cls-pw", str(a.cls_pw), "--modelos", *a.modelos]
         env = os.environ | {"CUDA_VISIBLE_DEVICES": str(g)}
         out = open(sal / "logs" / f"gpu{g}.log", "a")
         return subprocess.Popen(cmd, env=env, stdout=out, stderr=subprocess.STDOUT)
