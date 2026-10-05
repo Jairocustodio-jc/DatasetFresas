@@ -9,7 +9,7 @@ batch: 8
 imgsz: 640
 save: true
 save_period: -1
-cache: ram
+cache: false
 device: '0'
 workers: 2
 project: /kaggle/working/benchmark/6lotes/runs
