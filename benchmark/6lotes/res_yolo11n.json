@@ -1,0 +1,62 @@
+{
+ "modelo": "yolo11n",
+ "tamaño": "nano",
+ "gpu": "Tesla T4",
+ "epochs_max": 100,
+ "imgsz": 640,
+ "hsv_h": 0.0,
+ "estado": "completo",
+ "parado_por_tiempo": false,
+ "batch": 16,
+ "epochs_hechas": 27,
+ "mejor_epoch": 7,
+ "minutos": 10.5,
+ "val_map50": 0.8858,
+ "val_map50_95": 0.7417,
+ "val_precision": 0.8425,
+ "val_recall": 0.8169,
+ "val_ap50_por_clase": {
+  "unripe": 0.9563,
+  "early-pink": 0.9007,
+  "commercial-basic": 0.8148,
+  "commercial-high": 0.8118,
+  "overripe": 0.9455
+ },
+ "map50": 0.8688,
+ "map50_95": 0.7277,
+ "precision": 0.8,
+ "recall": 0.7962,
+ "ap50_por_clase": {
+  "unripe": 0.9762,
+  "early-pink": 0.8638,
+  "commercial-basic": 0.7451,
+  "commercial-high": 0.8029,
+  "overripe": 0.9561
+ },
+ "confusion_comercial": {
+  "commercial-basic": {
+   "cajas": 51,
+   "bien": 21.6,
+   "early-pink": 13.7,
+   "overripe": 25.5,
+   "otra_comercial": 29.4,
+   "unripe": 9.8,
+   "no_detectada": 0.0
+  },
+  "commercial-high": {
+   "cajas": 101,
+   "bien": 26.7,
+   "early-pink": 13.9,
+   "overripe": 32.7,
+   "otra_comercial": 26.7,
+   "unripe": 0.0,
+   "no_detectada": 0.0
+  }
+ },
+ "error_critico": 44.1,
+ "acierto_comercial": 25.0,
+ "inferencia_ms": 4.3,
+ "params_M": 2.59,
+ "gflops": 6.5,
+ "peso_MB": 5.5
+}

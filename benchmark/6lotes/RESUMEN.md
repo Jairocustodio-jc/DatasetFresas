@@ -1,6 +1,6 @@
 # Benchmark YOLO · 6lotes
 
-Actualizado 05/10/2026 07:08 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 05/10/2026 07:12 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -19,6 +19,7 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | 1 | yolov8n | 42.2 % | 30.9 % | 0.739 | 0.870 | 0.78 | 0.87 | 0.7516 | 45 (mejor 25) | 14.5 | 3.01 | 8.2 | 3.88 |
 | 2 | yolov10n | 35.5 % | 39.5 % | 0.735 | 0.861 | 0.82 | 0.83 | 0.7469 | 45 (mejor 25) | 19.8 | 2.71 | 8.5 | 5.69 |
 | 3 | yolov9t | 25.6 % | 38.8 % | 0.748 | 0.877 | 0.78 | 0.87 | 0.7612 | 44 (mejor 33) ⏱ | 27.4 | 2.01 | 7.9 | 6.1 |
+| 4 | yolo11n | 25.0 % | 44.1 % | 0.728 | 0.869 | 0.80 | 0.80 | 0.7417 | 27 (mejor 7) | 10.5 | 2.59 | 6.5 | 4.3 |
 
 **AP50 por clase (test)**
 
@@ -27,6 +28,7 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolov8n | 0.98 | 0.90 | 0.74 | 0.79 | 0.94 |
 | yolov10n | 0.98 | 0.88 | 0.68 | 0.81 | 0.95 |
 | yolov9t | 0.98 | 0.89 | 0.73 | 0.83 | 0.96 |
+| yolo11n | 0.98 | 0.86 | 0.75 | 0.80 | 0.96 |
 
 **A qué se predicen las cajas comerciales del test** (% de las cajas reales de cada clase)
 
@@ -38,12 +40,13 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolov10n | commercial-high | 101 | 36.6 | **5.9** | **31.7** | 25.7 | 0.0 | 0.0 |
 | yolov9t | commercial-basic | 51 | 23.5 | **9.8** | **25.5** | 23.5 | 17.6 | 0.0 |
 | yolov9t | commercial-high | 101 | 26.7 | **8.9** | **31.7** | 16.8 | 15.8 | 0.0 |
+| yolo11n | commercial-basic | 51 | 21.6 | **13.7** | **25.5** | 29.4 | 9.8 | 0.0 |
+| yolo11n | commercial-high | 101 | 26.7 | **13.9** | **32.7** | 26.7 | 0.0 | 0.0 |
 
 **Sin resultado todavía**
 
-- yolo11n: entrenando
 - yolo12n: entrenando
-- yolo26n: pendiente
+- yolo26n: entrenando
 - yolo11n-hsv: pendiente
 - yolo11n-1024: pendiente
 - yolo11n-hsv-1024: pendiente
