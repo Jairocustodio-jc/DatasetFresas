@@ -13,7 +13,9 @@ Y luego «Save Version → Save & Run All (Commit)»: así corre solo hasta 12 h
 Qué compara (mismas condiciones para todos):
   - nano:   yolov8n yolov9t yolov10n yolo11n yolo12n yolo26n   (v9 no tiene «n»: su menor es «t»)
   - grande: yolov8x yolov9e yolov10x yolo11x yolo12x yolo26x   (v9 no tiene «x»: su mayor es «e»)
-  - parten de los pesos COCO oficiales; mismos datos y misma partición (40 fotos de validación por lote, semilla 0);
+  - parten de los pesos COCO oficiales; misma partición para todos: 70 % train, 15 % validación, 15 % test, estratificada a la
+    vez por estado (cada parte con casi el mismo % de cajas de cada estado) y por lote; semilla 0; se guarda en particion.json;
+  - la validación elige la mejor época; el test se evalúa una sola vez al final con el mejor peso, y es lo que ordena la tabla;
   - imgsz 640, 100 épocas como máximo, paciencia 20, AdamW lr0 0,001, hsv_h 0 (el color define la clase), semilla 0;
   - batch 16 en nano y 8 en grande (memoria de la T4); nbs=64 acumula gradientes, así que el lote efectivo es el mismo.
 
@@ -64,6 +66,85 @@ def escribir(p, d):
     tmp = p.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(p)   # atómico: nunca queda un json a medias
+
+
+# ───────────────────────── partición train / val / test ─────────────────────────
+
+def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0):
+    """Reparte las fotos revisadas en train/val/test estratificando a la vez por clase (cajas de cada estado) y por lote.
+
+    Estratificación iterativa (Sechidis et al., 2011): se reparte primero la etiqueta más escasa, cada foto va a la parte que
+    más cajas de esa etiqueta le faltan para su porcentaje, y así cada parte queda con casi el mismo % de cada estado y de
+    cada lote. Devuelve la tabla de reparto (fotos y cajas por parte y por estado)."""
+    import random
+    from kaggle_fresas import ORD, caja, datos
+    random.seed(semilla)
+    lotes = sorted(rev)
+    fotos = []
+    for lote in lotes:
+        t, i, j = datos(lote)
+        for d in json.loads(t[i:j]):
+            if d["orig"] not in rev[lote].get("marcas", {}):
+                continue
+            figs = [f for f in rev[lote].get("correcciones", {}).get(d["orig"], d["figs"]) if f["label"] in ORD]
+            v = [0] * (len(ORD) + len(lotes))
+            for f in figs:
+                v[ORD.index(f["label"])] += 1
+            v[len(ORD) + lotes.index(lote)] = 1          # el lote cuenta como una etiqueta más
+            fotos.append({"lote": lote, "d": d, "figs": figs, "v": v})
+    random.shuffle(fotos)
+    nombres = ["train", "val", "test"]
+    tot = [sum(f["v"][k] for f in fotos) for k in range(len(fotos[0]["v"]))]
+    falta_et = [[t * p for t in tot] for p in partes]     # cuántas cajas/fotos de cada etiqueta le faltan a cada parte
+    falta_n = [len(fotos) * p for p in partes]
+    asign = {}
+    pend = set(range(len(fotos)))
+    while pend:
+        resto = [sum(fotos[i]["v"][k] for i in pend) for k in range(len(tot))]
+        k = min((x for x in range(len(tot)) if resto[x] > 0), key=lambda x: resto[x], default=None)
+        grupo = [i for i in pend if k is None or fotos[i]["v"][k] > 0]
+        for i in grupo:
+            s = max(range(3), key=lambda s: ((falta_et[s][k] if k is not None else 0), falta_n[s]))
+            asign[i] = s
+            falta_n[s] -= 1
+            for x, c in enumerate(fotos[i]["v"]):
+                falta_et[s][x] -= c
+            pend.discard(i)
+    shutil.rmtree(destino, ignore_errors=True)
+    for sp in nombres:
+        (destino / "images" / sp).mkdir(parents=True)
+        (destino / "labels" / sp).mkdir(parents=True)
+    listas = {sp: [] for sp in nombres}
+    for i, f in enumerate(fotos):
+        sp = nombres[asign[i]]
+        stem = f"{f['lote']}_{Path(f['d']['orig']).stem}"
+        shutil.copy(REPO / "revision" / f["lote"] / f["d"]["img"], destino / "images" / sp / f"{stem}.jpg")
+        lineas = []
+        for g in f["figs"]:
+            x1, y1, x2, y2 = caja(g["pts"])
+            lineas.append(f"{ORD.index(g['label'])} {(x1+x2)/2:.6f} {(y1+y2)/2:.6f} {x2-x1:.6f} {y2-y1:.6f}")
+        (destino / "labels" / sp / f"{stem}.txt").write_text("\n".join(lineas) + "\n")
+        listas[sp].append(f"{stem}.jpg")
+    (destino / "data.yaml").write_text(f"path: {destino.resolve()}\ntrain: images/train\nval: images/val\n"
+                                       f"test: images/test\nnames: {ORD}\n")
+    tabla = {}
+    for s, sp in enumerate(nombres):
+        mis = [f for i, f in enumerate(fotos) if asign[i] == s]
+        tabla[sp] = {"fotos": len(mis), "cajas": {c: sum(f["v"][x] for f in mis) for x, c in enumerate(ORD)},
+                     "por_lote": {l: sum(f["lote"] == l for f in mis) for l in lotes}}
+    return tabla, {sp: sorted(v) for sp, v in listas.items()}
+
+
+def tabla_reparto(tab):
+    """Tabla en markdown con el % de fotos y de cajas de cada estado en cada parte."""
+    from kaggle_fresas import ORD
+    tf = sum(t["fotos"] for t in tab.values())
+    filas = ["| Parte | Fotos | " + " | ".join(ORD) + " | Cajas |", "|---" * (len(ORD) + 3) + "|"]
+    for sp, t in tab.items():
+        cj = sum(t["cajas"].values())
+        filas.append(f"| {sp} | {t['fotos']} ({t['fotos']/tf:.0%}) | "
+                     + " | ".join(f"{t['cajas'][c]} ({t['cajas'][c]/max(cj,1):.0%})" for c in ORD) + f" | {cj} |")
+    return filas
 
 
 # ───────────────────────────── proceso de cada GPU ─────────────────────────────
@@ -145,13 +226,14 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             "minutos": round((time.time() - t0) / 60, 1)}
     try:   # evaluación final del mejor peso, igual para todos
         mb = YOLO(str(best))
-        v = mb.val(data=a.data, split="val", imgsz=640, batch=8, device=a.dev, plots=True, verbose=False,
-                   project=str(run), name="val", exist_ok=True)
-        nombres = v.names
-        res |= {"map50": round(float(v.box.map50), 4), "map50_95": round(float(v.box.map), 4),
-                "precision": round(float(v.box.mp), 4), "recall": round(float(v.box.mr), 4),
-                "ap50_por_clase": {nombres[int(c)]: round(float(x), 4) for c, x in zip(v.box.ap_class_index, v.box.ap50)},
-                "inferencia_ms": round(float(v.speed.get("inference", 0)), 2)}
+        for sp, pre in (("val", "val_"), ("test", "")):   # test: fotos que ningún modelo vio ni usó para elegir época
+            v = mb.val(data=a.data, split=sp, imgsz=640, batch=8, device=a.dev, plots=True, verbose=False,
+                       project=str(run), name=sp, exist_ok=True)
+            res |= {pre + "map50": round(float(v.box.map50), 4), pre + "map50_95": round(float(v.box.map), 4),
+                    pre + "precision": round(float(v.box.mp), 4), pre + "recall": round(float(v.box.mr), 4),
+                    pre + "ap50_por_clase": {v.names[int(c)]: round(float(x), 4)
+                                             for c, x in zip(v.box.ap_class_index, v.box.ap50)}}
+        res["inferencia_ms"] = round(float(v.speed.get("inference", 0)), 2)
         from ultralytics.utils.torch_utils import get_flops, get_num_params
         res |= {"params_M": round(get_num_params(mb.model) / 1e6, 2), "gflops": round(float(get_flops(mb.model, 640)), 1)}
     except Exception as e:
@@ -169,7 +251,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
 # ───────────────────────────── respaldo en GitHub ─────────────────────────────
 
 class Respaldo:
-    def __init__(self, sal, nombre, activo, secreto=None):
+    def __init__(self, sal, nombre, activo, secreto=None, huella=None):
         self.sal, self.nombre, self.tok = sal, nombre, None
         self.dir = Path("/tmp/bench_git")
         self.subidos = set()
@@ -194,7 +276,11 @@ class Respaldo:
             self.git("checkout", "-q", "--orphan", RAMA)
         prev = self.dir / "benchmark" / nombre
         n = 0
-        for p in prev.glob("res_*.json"):   # retomar: lo completo de una corrida anterior no se repite
+        misma = (leer(prev / "config.json") or {}).get("huella_particion") == huella
+        if not misma and any(prev.glob("res_*.json")):
+            log("La partición cambió desde la corrida anterior (más fotos revisadas): se entrena todo de nuevo.")
+            shutil.rmtree(prev)
+        for p in (prev.glob("res_*.json") if misma else []):   # retomar: lo completo de una corrida anterior no se repite
             if (leer(p) or {}).get("estado") == "completo" and not (sal / p.name).exists():
                 shutil.copy(p, sal / p.name)
                 n += 1
@@ -272,7 +358,8 @@ def resumen(sal, modelos, info):
         if r is None:
             r = {"modelo": m, "estado": "entrenando" if (sal / "claims" / f"{m}.lock").exists() else "pendiente"}
         filas.append(r)
-    cols = ["modelo", "tamaño", "estado", "map50", "map50_95", "precision", "recall", "epochs_hechas", "mejor_epoch",
+    cols = ["modelo", "tamaño", "estado", "map50", "map50_95", "precision", "recall", "val_map50", "val_map50_95",
+            "epochs_hechas", "mejor_epoch",
             "parado_por_tiempo", "minutos", "batch", "params_M", "gflops", "inferencia_ms", "peso_MB", "gpu", "error"]
     with open(sal / "resumen.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
@@ -282,15 +369,19 @@ def resumen(sal, modelos, info):
     clases = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
     t = [f"# Benchmark YOLO · {info['nombre']}", "",
          f"Actualizado {time.strftime('%d/%m/%Y %H:%M')} (hora de Kaggle, UTC). Lotes: {', '.join(info['lotes'])}. "
-         f"{info['fotos']} fotos ({info['val']} de validación). GPU: {info['gpus']}.", "",
-         "| # | Modelo | mAP50-95 | mAP50 | P | R | Épocas | Min | Params (M) | GFLOPs | ms/img |",
-         "|---|---|---|---|---|---|---|---|---|---|---|"]
+         f"{info['fotos']} fotos. GPU: {info['gpus']}.", "",
+         "**Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):", "",
+         *tabla_reparto(info["reparto"]), "",
+         "**Resultados en test** (fotos que ningún modelo vio al entrenar ni usó para elegir su mejor época); "
+         "ordenados por mAP50-95. La columna «val» es el mAP50-95 en validación.", "",
+         "| # | Modelo | mAP50-95 | mAP50 | P | R | val | Épocas | Min | Params (M) | GFLOPs | ms/img |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(ok, 1):
         ep = f"{r.get('epochs_hechas')} (mejor {r.get('mejor_epoch')})" + (" ⏱" if r.get("parado_por_tiempo") else "")
         t.append(f"| {i} | {r['modelo']} | {r['map50_95']:.3f} | {r['map50']:.3f} | {r['precision']:.2f} | {r['recall']:.2f} "
-                 f"| {ep} | {r.get('minutos')} | {r.get('params_M', '')} | {r.get('gflops', '')} | {r.get('inferencia_ms', '')} |")
+                 f"| {r.get('val_map50_95', '')} | {ep} | {r.get('minutos')} | {r.get('params_M', '')} | {r.get('gflops', '')} | {r.get('inferencia_ms', '')} |")
     if ok:
-        t += ["", "**AP50 por clase**", "", "| Modelo | " + " | ".join(clases) + " |", "|---" * (len(clases) + 1) + "|"]
+        t += ["", "**AP50 por clase (test)**", "", "| Modelo | " + " | ".join(clases) + " |", "|---" * (len(clases) + 1) + "|"]
         for r in ok:
             ap = r.get("ap50_por_clase", {})
             t.append(f"| {r['modelo']} | " + " | ".join(f"{ap[c]:.2f}" if c in ap else "–" for c in clases) + " |")
@@ -315,6 +406,8 @@ def main():
     ap.add_argument("--salida", default="/kaggle/working/benchmark")
     ap.add_argument("--sin-github", action="store_true", help="no subir nada (solo /kaggle/working)")
     ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token de GitHub")
+    ap.add_argument("--partes", type=float, nargs=3, default=[0.70, 0.15, 0.15], metavar=("TRAIN", "VAL", "TEST"),
+                    help="proporción de fotos para train, validación y test (por defecto 0.70 0.15 0.15)")
     # internos (proceso de cada GPU)
     ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--gpu", type=int, default=0, help=argparse.SUPPRESS)
@@ -338,9 +431,13 @@ def main():
     gpus = ", ".join(torch.cuda.get_device_name(i) for i in range(n_gpu))
     log(f"GPU: {gpus}")
 
-    from kaggle_fresas import revisiones, armar_dataset
+    from kaggle_fresas import revisiones
     rev = revisiones()
     nombre = a.nombre or f"{len(rev)}lotes"
+    ds = Path("/tmp/ds_fresas")
+    reparto, listas = particionar(rev, ds, a.partes)
+    import hashlib
+    huella = hashlib.sha1(json.dumps([a.partes, listas], sort_keys=True).encode()).hexdigest()[:12]
     sal = Path(a.salida) / nombre
     (sal / "claims").mkdir(parents=True, exist_ok=True)
     (sal / "logs").mkdir(exist_ok=True)
@@ -352,13 +449,13 @@ def main():
     log(f"Corrida «{nombre}» · lotes revisados: {', '.join(sorted(rev))} · fin a más tardar a las "
         f"{time.strftime('%H:%M', time.localtime(fin))}")
 
-    respaldo = Respaldo(sal, nombre, not a.sin_github, a.secreto)
-    ds = Path("/tmp/ds_fresas")
-    n = armar_dataset(rev, ds)
-    val = sorted(p.name for p in (ds / "images" / "val").iterdir())
-    info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "val": len(val), "gpus": gpus}
-    escribir(sal / "config.json", info | {"modelos": a.modelos, "epochs": a.epochs, "horas": a.horas,
-                                          "fotos_validacion": val, "inicio": time.strftime("%Y-%m-%d %H:%M")})
+    respaldo = Respaldo(sal, nombre, not a.sin_github, a.secreto, huella)
+    n = sum(len(v) for v in listas.values())
+    info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "gpus": gpus, "reparto": reparto}
+    escribir(sal / "config.json", info | {"modelos": a.modelos, "epochs": a.epochs, "horas": a.horas, "partes": a.partes,
+                                          "huella_particion": huella, "inicio": time.strftime("%Y-%m-%d %H:%M")})
+    escribir(sal / "particion.json", listas)
+    log("Reparto (fotos y % de cajas por estado):\n" + "\n".join(tabla_reparto(reparto)))
     datas = []
     for g in range(n_gpu):   # una copia por GPU: así no chocan al escribir la caché de etiquetas
         d = Path(f"/tmp/ds_fresas_g{g}")
@@ -366,7 +463,7 @@ def main():
         shutil.copytree(ds, d)
         (d / "data.yaml").write_text((ds / "data.yaml").read_text().replace(str(ds.resolve()), str(d.resolve())))
         datas.append(str(d / "data.yaml"))
-    log(f"{n} fotos ({len(val)} de validación) · modelos: {' '.join(a.modelos)}")
+    log(f"{n} fotos · modelos: {' '.join(a.modelos)}")
     resumen(sal, a.modelos, info)
     respaldo.sincronizar()
 
