@@ -1,6 +1,6 @@
 # Benchmark YOLO · 6lotes
 
-Actualizado 05/10/2026 06:02 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos (240 de validación). GPU: Tesla T4, Tesla T4.
+Actualizado 05/10/2026 06:05 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos (240 de validación). GPU: Tesla T4, Tesla T4.
 
 | # | Modelo | mAP50-95 | mAP50 | P | R | Épocas | Min | Params (M) | GFLOPs | ms/img |
 |---|---|---|---|---|---|---|---|---|---|---|
