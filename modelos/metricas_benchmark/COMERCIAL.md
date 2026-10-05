@@ -13,3 +13,6 @@ Se toma la predicción más segura que cubre cada fresa (IoU ≥ 0,5, confianza 
 | 7 | yolo11n-hsv | 71.7 % | 13.8 % | 0.719 | 14.2 |
 | 8 | yolov9t | 69.1 % | 15.8 % | 0.748 | 27.4 |
 | 9 | yolov8n | 63.8 % | 19.1 % | 0.739 | 14.5 |
+| – | yolov9e (grande) | 77.0 % | 10.5 % | 0.753 | 109.2 |
+
+Los modelos grandes se agregan a medida que terminan. yolov9e (25 veces más pesado) no supera a yolo26n.

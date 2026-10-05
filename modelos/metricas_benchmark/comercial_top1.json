@@ -156,5 +156,23 @@
     "early-pink": 1
    }
   }
+ },
+ "yolov9e": {
+  "acierto_top1": 77.0,
+  "critico_top1": 10.5,
+  "cajas_con_2_clases": 68,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 37,
+    "commercial-high": 10,
+    "early-pink": 4
+   },
+   "commercial-high": {
+    "commercial-high": 80,
+    "commercial-basic": 9,
+    "early-pink": 2,
+    "overripe": 10
+   }
+  }
  }
 }
