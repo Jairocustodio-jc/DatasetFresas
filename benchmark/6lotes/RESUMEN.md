@@ -1,6 +1,6 @@
 # Benchmark YOLO · 6lotes
 
-Actualizado 05/10/2026 10:56 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 05/10/2026 10:58 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -22,10 +22,11 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | 4 | yolo12n | 33.6 % | 40.1 % | 0.723 | 0.848 | 0.82 | 0.84 | 0.7471 | 58 (mejor 49) ⏱ | 27.5 | 2.57 | 7.5 | 6.19 |
 | 5 | yolov9e | 32.9 % | 39.5 % | 0.753 | 0.891 | 0.82 | 0.88 | 0.7423 | 36 (mejor 16) | 109.2 | 58.15 | 192.7 | 56.36 |
 | 6 | yolo11n-hsv-1024 | 32.3 % | 34.2 % | 0.740 | 0.866 | 0.82 | 0.83 | 0.7576 | 58 (mejor 38) | 43.8 | 2.59 | 6.5 | 7.5 |
-| 7 | yolo11n-1024 | 28.9 % | 38.2 % | 0.761 | 0.890 | 0.86 | 0.78 | 0.7557 | 46 (mejor 26) | 39.6 | 2.59 | 6.5 | 8.08 |
-| 8 | yolo11n-hsv | 28.3 % | 34.9 % | 0.719 | 0.853 | 0.80 | 0.85 | 0.7516 | 36 (mejor 16) | 14.2 | 2.59 | 6.5 | 5.4 |
-| 9 | yolov9t | 25.6 % | 38.8 % | 0.748 | 0.877 | 0.78 | 0.87 | 0.7612 | 44 (mejor 33) ⏱ | 27.4 | 2.01 | 7.9 | 6.1 |
-| 10 | yolo11n | 25.0 % | 44.1 % | 0.728 | 0.869 | 0.80 | 0.80 | 0.7417 | 27 (mejor 7) | 10.5 | 2.59 | 6.5 | 4.3 |
+| 7 | yolo12x | 31.6 % | 38.2 % | 0.764 | 0.892 | 0.81 | 0.89 | 0.763 | 48 (mejor 28) | 147.0 | 59.12 | 209.7 | 68.28 |
+| 8 | yolo11n-1024 | 28.9 % | 38.2 % | 0.761 | 0.890 | 0.86 | 0.78 | 0.7557 | 46 (mejor 26) | 39.6 | 2.59 | 6.5 | 8.08 |
+| 9 | yolo11n-hsv | 28.3 % | 34.9 % | 0.719 | 0.853 | 0.80 | 0.85 | 0.7516 | 36 (mejor 16) | 14.2 | 2.59 | 6.5 | 5.4 |
+| 10 | yolov9t | 25.6 % | 38.8 % | 0.748 | 0.877 | 0.78 | 0.87 | 0.7612 | 44 (mejor 33) ⏱ | 27.4 | 2.01 | 7.9 | 6.1 |
+| 11 | yolo11n | 25.0 % | 44.1 % | 0.728 | 0.869 | 0.80 | 0.80 | 0.7417 | 27 (mejor 7) | 10.5 | 2.59 | 6.5 | 4.3 |
 
 **AP50 por clase (test)**
 
@@ -37,6 +38,7 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolo12n | 0.99 | 0.90 | 0.64 | 0.77 | 0.95 |
 | yolov9e | 0.98 | 0.88 | 0.78 | 0.84 | 0.97 |
 | yolo11n-hsv-1024 | 0.99 | 0.87 | 0.73 | 0.78 | 0.96 |
+| yolo12x | 0.99 | 0.91 | 0.76 | 0.83 | 0.97 |
 | yolo11n-1024 | 0.98 | 0.89 | 0.79 | 0.83 | 0.96 |
 | yolo11n-hsv | 0.98 | 0.88 | 0.64 | 0.81 | 0.96 |
 | yolov9t | 0.98 | 0.89 | 0.73 | 0.83 | 0.96 |
@@ -58,6 +60,8 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolov9e | commercial-high | 101 | 29.7 | **12.9** | **25.7** | 28.7 | 3.0 | 0.0 |
 | yolo11n-hsv-1024 | commercial-basic | 51 | 27.5 | **25.5** | **5.9** | 37.3 | 3.9 | 0.0 |
 | yolo11n-hsv-1024 | commercial-high | 101 | 34.7 | **5.0** | **30.7** | 28.7 | 1.0 | 0.0 |
+| yolo12x | commercial-basic | 51 | 29.4 | **15.7** | **19.6** | 33.3 | 2.0 | 0.0 |
+| yolo12x | commercial-high | 101 | 32.7 | **6.9** | **32.7** | 26.7 | 1.0 | 0.0 |
 | yolo11n-1024 | commercial-basic | 51 | 31.4 | **25.5** | **17.6** | 19.6 | 5.9 | 0.0 |
 | yolo11n-1024 | commercial-high | 101 | 27.7 | **5.9** | **29.7** | 28.7 | 7.9 | 0.0 |
 | yolo11n-hsv | commercial-basic | 51 | 35.3 | **15.7** | **9.8** | 17.6 | 21.6 | 0.0 |
@@ -78,9 +82,8 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 
 **Sin resultado todavía**
 
-- yolo12x: entrenando
 - yolov8x: entrenando
-- yolov10x: pendiente
+- yolov10x: entrenando
 - yolo11x: pendiente
 - yolo26x: pendiente
 
