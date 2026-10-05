@@ -242,7 +242,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             modelo.add_callback("on_fit_epoch_end", por_tiempo)
             modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=imgsz, batch=batch, device=a.dev,
                          optimizer="AdamW", lr0=0.001, nbs=64, seed=0, deterministic=True, workers=a.workers,
-                         cache="ram", project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
+                         cache="ram" if not grande and imgsz <= 640 else False, project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
                          fliplr=0.5, hsv_h=hsv_h, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=a.cls_pw)
             break
         except Exception as e:
