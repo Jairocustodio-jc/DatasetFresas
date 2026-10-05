@@ -1,7 +1,7 @@
 modelo,tamaño,imgsz,hsv_h,estado,acierto_comercial,error_critico,map50,map50_95,precision,recall,val_map50,val_map50_95,epochs_hechas,mejor_epoch,parado_por_tiempo,minutos,batch,params_M,gflops,inferencia_ms,peso_MB,gpu,error
-yolov8n-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
+yolov8n-1024,nano,1024,0.0,completo,61.2,20.4,0.8797,0.7524,0.8016,0.863,0.9015,0.7662,40,20,False,35.0,8,3.01,8.2,7.63,6.3,Tesla T4,
 yolov9t-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
-yolov10n-1024,,,,pendiente,,,,,,,,,,,,,,,,,,,
+yolov10n-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
 yolo11n-1024,nano,1024,0.0,completo,28.9,38.2,0.89,0.7606,0.8579,0.7824,0.8881,0.7557,46,26,False,39.6,8,2.59,6.5,8.08,5.5,Tesla T4,
 yolo12n-1024,,,,pendiente,,,,,,,,,,,,,,,,,,,
 yolo26n-1024,,,,pendiente,,,,,,,,,,,,,,,,,,,
