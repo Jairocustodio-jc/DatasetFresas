@@ -12,7 +12,7 @@ Toma como «revisados» todos los lotes que tengan revisión en feedback/revisio
     revision/<lote>/index.html        (la página de cada lote con sus sugerencias)
     modelos/yolo_fresas_<N>lotes.pt   (el modelo nuevo)
 Cópialos al repo en tu PC (misma ruta) y haz git push. Con --push lo sube solo, si guardas tu token de GitHub en
-Kaggle → Add-ons → Secrets con el nombre GITHUB_TOKEN (permiso Contents: Read and write sobre el repo).
+Kaggle → Add-ons → Secrets con el nombre GITHUB_TOKEN o key_gh_strawberry (otro nombre: --secreto NOMBRE) (permiso Contents: Read and write sobre el repo).
 
 Reglas que reemplazan la revisión visual (sacadas de los lotes 1–5):
   - early-pink → unripe solo con confianza ≥ 0,95 (casi siempre era una fresa con rubor, o sea early-pink);
@@ -25,12 +25,34 @@ import json
 import random
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ORD = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
 UMBRAL = {("early-pink", "unripe"): 0.95, ("commercial-high", "overripe"): 0.90}
 UMBRAL_ESTADO, UMBRAL_FALTA, LADO_MIN = 0.60, 0.80, 0.025
 REPO = Path(__file__).resolve().parent.parent
+
+
+SECRETOS = ["GITHUB_TOKEN", "key_gh_strawberry"]
+
+
+def token(extra=None):
+    """Token de GitHub desde los Secrets de Kaggle (prueba varios nombres) o la variable de entorno GITHUB_TOKEN."""
+    import os
+    try:
+        from kaggle_secrets import UserSecretsClient
+        cli = UserSecretsClient()
+        for n in ([extra] if extra else []) + SECRETOS:
+            try:
+                t = cli.get_secret(n)
+                if t:
+                    return t
+            except Exception:
+                pass
+    except ImportError:
+        pass
+    return os.environ.get("GITHUB_TOKEN")
 
 
 def git(*a):
@@ -145,7 +167,8 @@ def main():
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--device", default="auto", help="auto (GPU si hay), 0 = GPU, cpu")
     ap.add_argument("--salida", default="/kaggle/working/salida")
-    ap.add_argument("--push", action="store_true", help="subir a GitHub con el secreto GITHUB_TOKEN de Kaggle")
+    ap.add_argument("--push", action="store_true", help="subir a GitHub con el token guardado en los Secrets de Kaggle")
+    ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token (si no es uno de los conocidos)")
     a = ap.parse_args()
     from ultralytics import YOLO
     import torch
@@ -182,8 +205,9 @@ def main():
         shutil.copy(REPO / rel, sal / rel)
     print("Listo. Archivos en", sal)
     if a.push:
-        from kaggle_secrets import UserSecretsClient
-        tok = UserSecretsClient().get_secret("GITHUB_TOKEN")
+        tok = token(a.secreto)
+        if not tok:
+            sys.exit("No encontré el token: actívalo en Add-ons → Secrets (GITHUB_TOKEN o key_gh_strawberry) o usa --secreto NOMBRE.")
         git("config", "user.email", "kaggle@fresas")
         git("config", "user.name", "Kaggle fresas")
         git("add", *archivos)

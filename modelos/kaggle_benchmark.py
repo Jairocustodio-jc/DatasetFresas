@@ -1,6 +1,7 @@
 """Compara YOLOv8, v9, v10, 11, 12 y 26 (nano y el más grande) con los lotes ya revisados. Para dejarlo corriendo de noche en Kaggle.
 
-Notebook de Kaggle (Settings → Accelerator: «GPU T4 x2», Internet: On; Add-ons → Secrets: GITHUB_TOKEN activado):
+Notebook de Kaggle (Settings → Accelerator: «GPU T4 x2», Internet: On; Add-ons → Secrets: tu token de GitHub
+activado, con el nombre GITHUB_TOKEN o key_gh_strawberry; si usas otro nombre, agrega --secreto NOMBRE):
 
     !pip -q install ultralytics
     !git clone -q -b claude/jolly-heisenberg-qa6cj9 https://github.com/Jairocustodio-jc/DatasetFresas
@@ -168,19 +169,17 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
 # ───────────────────────────── respaldo en GitHub ─────────────────────────────
 
 class Respaldo:
-    def __init__(self, sal, nombre, activo):
+    def __init__(self, sal, nombre, activo, secreto=None):
         self.sal, self.nombre, self.tok = sal, nombre, None
         self.dir = Path("/tmp/bench_git")
         self.subidos = set()
         if not activo:
             return
-        try:
-            from kaggle_secrets import UserSecretsClient
-            self.tok = UserSecretsClient().get_secret("GITHUB_TOKEN")
-        except Exception:
-            self.tok = os.environ.get("GITHUB_TOKEN")
+        from kaggle_fresas import token
+        self.tok = token(secreto)
         if not self.tok:
-            log("⚠ Sin GITHUB_TOKEN: los resultados quedan solo en /kaggle/working (Output del notebook).")
+            log("⚠ No encontré el token de GitHub en los Secrets (GITHUB_TOKEN, key_gh_strawberry o --secreto): "
+                "los resultados quedan solo en /kaggle/working (Output del notebook).")
             return
         self.url = f"https://x-access-token:{self.tok}@github.com/{GH}.git"
         shutil.rmtree(self.dir, ignore_errors=True)
@@ -315,6 +314,7 @@ def main():
     ap.add_argument("--nombre", default=None, help="nombre de la corrida (por defecto «<N>lotes»); repetirlo retoma")
     ap.add_argument("--salida", default="/kaggle/working/benchmark")
     ap.add_argument("--sin-github", action="store_true", help="no subir nada (solo /kaggle/working)")
+    ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token de GitHub")
     # internos (proceso de cada GPU)
     ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--gpu", type=int, default=0, help=argparse.SUPPRESS)
@@ -352,7 +352,7 @@ def main():
     log(f"Corrida «{nombre}» · lotes revisados: {', '.join(sorted(rev))} · fin a más tardar a las "
         f"{time.strftime('%H:%M', time.localtime(fin))}")
 
-    respaldo = Respaldo(sal, nombre, not a.sin_github)
+    respaldo = Respaldo(sal, nombre, not a.sin_github, a.secreto)
     ds = Path("/tmp/ds_fresas")
     n = armar_dataset(rev, ds)
     val = sorted(p.name for p in (ds / "images" / "val").iterdir())
