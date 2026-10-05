@@ -17,3 +17,18 @@ Acierto comercial y error crítico: la predicción más segura que cubre cada fr
 | 11 | yolov8n | nano | 63.8 % | 19.1 % | 0.870 | 0.739 | 14.5 |
 
 Sin terminar al 05/10 12:00 UTC: yolov8x, yolov10x, yolo11x, yolo26x.
+
+## ¿Mejora de verdad? Pruebas pareadas sobre las mismas 152 fresas comerciales del test
+McNemar exacto (¿la diferencia puede ser azar?) e intervalo de confianza del 95 % por bootstrap. En «error crítico»,
+una diferencia positiva es una reducción del error.
+
+| Comparación | Acierto: diferencia (IC 95 %), p | Error crítico: reducción (IC 95 %), p |
+|---|---|---|
+| yolo11n → + tono | −0,7 (−7,2 a +5,9), p = 1,00 | −0,7 (−5,9 a +4,6), p = 1,00 |
+| yolo11n → + 1024 px | +3,3 (−5,3 a +11,8), p = 0,54 | +3,9 (−2,0 a +9,9), p = 0,29 |
+| yolo11n 1024 → + tono | +3,3 (−3,3 a +9,9), p = 0,44 | +3,9 (0,0 a +7,9), p = 0,11 |
+| **yolo11n → + tono + 1024 px** | +6,6 (−0,7 a +14,5), p = 0,13 | **+7,9 (+2,0 a +13,8), p = 0,017** |
+| yolo26n → yolo11n + tono + 1024 px | +2,0 (−5,3 a +9,9), p = 0,74 | +1,3 (−3,3 a +6,6), p = 0,79 |
+
+Lo único significativo (p < 0,05): tono + 1024 px reduce el error crítico de yolo11n. Corresponde a 17 fresas que pasan a
+estar bien, contra 5 que pasan a estar mal. Ningún otro cambio, ni la diferencia con yolo26n, es distinguible del azar.
