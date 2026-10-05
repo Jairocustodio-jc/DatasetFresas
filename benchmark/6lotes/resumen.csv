@@ -1,9 +1,9 @@
 modelo,tamaño,imgsz,hsv_h,estado,acierto_comercial,error_critico,map50,map50_95,precision,recall,val_map50,val_map50_95,epochs_hechas,mejor_epoch,parado_por_tiempo,minutos,batch,params_M,gflops,inferencia_ms,peso_MB,gpu,error
 yolov8n-1024,nano,1024,0.0,completo,61.2,20.4,0.8797,0.7524,0.8016,0.863,0.9015,0.7662,40,20,False,35.0,8,3.01,8.2,7.63,6.3,Tesla T4,
-yolov9t-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
+yolov9t-1024,nano,1024,0.0,completo,79.0,7.9,0.9048,0.7784,0.8494,0.8642,0.8859,0.7539,46,26,False,54.8,8,2.01,7.9,9.69,4.7,Tesla T4,
 yolov10n-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
 yolo11n-1024,nano,1024,0.0,completo,28.9,38.2,0.89,0.7606,0.8579,0.7824,0.8881,0.7557,46,26,False,39.6,8,2.59,6.5,8.08,5.5,Tesla T4,
-yolo12n-1024,,,,pendiente,,,,,,,,,,,,,,,,,,,
+yolo12n-1024,,,,entrenando,,,,,,,,,,,,,,,,,,,
 yolo26n-1024,,,,pendiente,,,,,,,,,,,,,,,,,,,
 yolov9e,grande,640,0.0,completo,32.9,39.5,0.8909,0.7528,0.823,0.8751,0.882,0.7423,36,16,False,109.2,8,58.15,192.7,56.36,117.3,Tesla T4,
 yolo12x,grande,640,0.0,completo,31.6,38.2,0.8919,0.7641,0.8133,0.8854,0.8946,0.763,48,28,False,147.0,8,59.12,209.7,68.28,119.1,Tesla T4,
