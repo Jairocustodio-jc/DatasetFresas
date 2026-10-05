@@ -1,4 +1,22 @@
 {
+ "yolo12x": {
+  "acierto_top1": 72.4,
+  "critico_top1": 12.5,
+  "cajas_con_2_clases": 56,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 34,
+    "commercial-high": 12,
+    "early-pink": 5
+   },
+   "commercial-high": {
+    "commercial-high": 76,
+    "overripe": 12,
+    "commercial-basic": 11,
+    "early-pink": 2
+   }
+  }
+ },
  "yolov8n": {
   "acierto_top1": 63.8,
   "critico_top1": 19.1,
@@ -30,6 +48,24 @@
     "commercial-high": 74,
     "overripe": 10,
     "commercial-basic": 17
+   }
+  }
+ },
+ "yolov9e": {
+  "acierto_top1": 77.0,
+  "critico_top1": 10.5,
+  "cajas_con_2_clases": 68,
+  "conf": {
+   "commercial-basic": {
+    "commercial-basic": 37,
+    "commercial-high": 10,
+    "early-pink": 4
+   },
+   "commercial-high": {
+    "commercial-high": 80,
+    "commercial-basic": 9,
+    "early-pink": 2,
+    "overripe": 10
    }
   }
  },
@@ -154,24 +190,6 @@
     "overripe": 7,
     "commercial-basic": 11,
     "early-pink": 1
-   }
-  }
- },
- "yolov9e": {
-  "acierto_top1": 77.0,
-  "critico_top1": 10.5,
-  "cajas_con_2_clases": 68,
-  "conf": {
-   "commercial-basic": {
-    "commercial-basic": 37,
-    "commercial-high": 10,
-    "early-pink": 4
-   },
-   "commercial-high": {
-    "commercial-high": 80,
-    "commercial-basic": 9,
-    "early-pink": 2,
-    "overripe": 10
    }
   }
  }
