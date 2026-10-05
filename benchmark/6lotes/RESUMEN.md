@@ -1,6 +1,6 @@
 # Benchmark YOLO · 6lotes
 
-Actualizado 05/10/2026 06:43 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 05/10/2026 06:48 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -16,12 +16,25 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 
 | # | Modelo | Acierto com. | Error crítico | mAP50-95 | mAP50 | P | R | val | Épocas | Min | Params (M) | GFLOPs | ms/img |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | yolov8n | 42.2 % | 30.9 % | 0.739 | 0.870 | 0.78 | 0.87 | 0.7516 | 45 (mejor 25) | 14.5 | 3.01 | 8.2 | 3.88 |
+
+**AP50 por clase (test)**
+
+| Modelo | unripe | early-pink | commercial-basic | commercial-high | overripe |
+|---|---|---|---|---|---|
+| yolov8n | 0.98 | 0.90 | 0.74 | 0.79 | 0.94 |
+
+**A qué se predicen las cajas comerciales del test** (% de las cajas reales de cada clase)
+
+| Modelo | Clase real | Cajas | ✓ bien | → early-pink | → overripe | → la otra comercial | → unripe | no detectada |
+|---|---|---|---|---|---|---|---|---|
+| yolov8n | commercial-basic | 51 | 37.3 | **31.4** | **7.8** | 23.5 | 0.0 | 0.0 |
+| yolov8n | commercial-high | 101 | 44.6 | **7.9** | **18.8** | 27.7 | 1.0 | 0.0 |
 
 **Sin resultado todavía**
 
-- yolov8n: entrenando
 - yolov9t: entrenando
-- yolov10n: pendiente
+- yolov10n: entrenando
 - yolo11n: pendiente
 - yolo12n: pendiente
 - yolo26n: pendiente
