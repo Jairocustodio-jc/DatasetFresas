@@ -25,3 +25,11 @@
 - `scripts/`: preparar el dataset desde la revisión (`preparar.py`), entrenar (`entrenar.py`), validar contra la revisión
   (`validar.py`) y escribir las sugerencias en un lote (`inyectar.py modelo lote umbral_estado umbral_faltantes`).
   Son scripts de trabajo con rutas del entorno donde se entrenó; hay que ajustar las rutas para usarlos en otra máquina.
+
+## Benchmark de versiones de YOLO en Kaggle (`kaggle_benchmark.py`)
+
+Compara YOLOv8, v9, v10, 11, 12 y 26 en su versión más chica (n; en v9, t) y en la más grande (x; en v9, e) con todos los
+lotes revisados, en las mismas condiciones. Está pensado para dejarlo corriendo solo toda la noche en Kaggle, con «Save &
+Run All»: reparte las horas entre los modelos, usa las 2 GPU si hay, se reinicia si un proceso muere y continúa si se vuelve
+a correr. Va subiendo los resultados a la rama `yolo-benchmark` y los pesos a un release `benchmark-<nombre>`. Las instrucciones
+están en el docstring del script.
