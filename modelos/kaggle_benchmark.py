@@ -54,7 +54,17 @@ GRANDE = ["yolov9e", "yolo12x", "yolov8x", "yolov10x", "yolo11x", "yolo26x"]   #
 # Experimentos con yolo11n: ¿el tono engaña a la red? (hsv_h 0,015 la obliga a mirar patrón, aquenios y brillo en vez del
 # tono exacto) ¿la resolución ayuda? (1024 px conserva aquenios y brillo). La base (hsv_h 0, 640 px) es «yolo11n».
 EXPER = ["yolo11n-hsv", "yolo11n-1024", "yolo11n-hsv-1024"]
-PESO = {m: 1 for m in NANO} | {"yolo11n-hsv": 1, "yolo11n-1024": 2.5, "yolo11n-hsv-1024": 2.5} | {m: 6 for m in GRANDE}
+# Cualquier modelo admite los sufijos «-hsv» (aumento de tono) y «-1024» (1024 px), p. ej. yolo26n-hsv-1024.
+
+
+def peso(m):
+    """Costo relativo de entrenar m (para repartir el tiempo): grande ≈ 6 nano; 1024 px ≈ 2,5 veces 640 px."""
+    return (6 if m.split("-")[0] in GRANDE else 1) * (2.5 if "1024" in m else 1)
+
+
+def valido(m):
+    base, *suf = m.split("-")
+    return base in NANO + GRANDE and set(suf) <= {"hsv", "1024"}
 
 
 def ajustes(m):
@@ -87,7 +97,7 @@ def escribir(p, d):
 COMERCIAL = ["commercial-basic", "commercial-high"]   # las clases que más importan: confundirlas sale caro
 
 
-def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0, sobremuestreo=2):
+def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0, sobremuestreo=2, fijo=None):
     """Reparte las fotos revisadas en train/val/test estratificando a la vez por clase (cajas de cada estado) y por lote.
 
     Estratificación iterativa (Sechidis et al., 2011): se reparte primero la etiqueta más escasa, cada foto va a la parte que
@@ -112,11 +122,16 @@ def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0, sobremuestre
             fotos.append({"lote": lote, "d": d, "figs": figs, "v": v})
     random.shuffle(fotos)
     nombres = ["train", "val", "test"]
+    if fijo:   # partición de una corrida anterior: mismas fotos en las mismas partes (las revisadas después se ignoran)
+        fotos = [f for f in fotos if f"{f['lote']}_{Path(f['d']['orig']).stem}.jpg" in fijo]
     tot = [sum(f["v"][k] for f in fotos) for k in range(len(fotos[0]["v"]))]
     falta_et = [[t * p for t in tot] for p in partes]     # cuántas cajas/fotos de cada etiqueta le faltan a cada parte
     falta_n = [len(fotos) * p for p in partes]
     asign = {}
     pend = set(range(len(fotos)))
+    if fijo:
+        asign = {i: nombres.index(fijo[f"{f['lote']}_{Path(f['d']['orig']).stem}.jpg"]) for i, f in enumerate(fotos)}
+        pend = set()
     while pend:
         resto = [sum(fotos[i]["v"][k] for i in pend) for k in range(len(tot))]
         k = min((x for x in range(len(tot)) if resto[x] > 0), key=lambda x: resto[x], default=None)
@@ -200,14 +215,14 @@ def worker(a):
             escribir(sal / f"res_{m}.json", {"modelo": m, "estado": "sin tiempo"})
             log(f"[GPU {a.gpu}] {m}: sin tiempo, se salta")
             continue
-        carga = sum(PESO[x] for x in pend) / n_gpu
-        tope = min(resta, resta * PESO[m] / max(carga, PESO[m]))
+        carga = sum(peso(x) for x in pend) / n_gpu
+        tope = min(resta, resta * peso(m) / max(carga, peso(m)))
         entrenar(m, a, sal, tope, fin, gpu, YOLO)
         torch.cuda.empty_cache()
 
 
 def entrenar(m, a, sal, tope, fin, gpu, YOLO):
-    grande = m in GRANDE
+    grande = m.split("-")[0] in GRANDE
     base, imgsz, hsv_h = ajustes(m)
     batch = 8 if grande or imgsz > 640 else 16
     t0 = time.time()
@@ -441,6 +456,7 @@ class Respaldo:
 
 
 def resumen(sal, modelos, info):
+    modelos = list(modelos) + sorted({p.stem[4:] for p in sal.glob("res_*.json")} - set(modelos))   # también los de antes
     filas = []
     for m in modelos:
         r = leer(sal / f"res_{m}.json")
@@ -521,6 +537,8 @@ def main():
     ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token de GitHub")
     ap.add_argument("--partes", type=float, nargs=3, default=[0.70, 0.15, 0.15], metavar=("TRAIN", "VAL", "TEST"),
                     help="proporción de fotos para train, validación y test (por defecto 0.70 0.15 0.15)")
+    ap.add_argument("--nueva-particion", action="store_true",
+                    help="rehacer la partición con todas las fotos revisadas (por defecto reusa la de la corrida guardada)")
     ap.add_argument("--sobremuestreo", type=int, default=2,
                     help="veces que aparece en train cada foto con cajas comerciales (1 = sin repetir)")
     ap.add_argument("--cls-pw", type=float, default=0.5,
@@ -538,9 +556,9 @@ def main():
 
     inicio = time.time()
     fin = inicio + a.horas * 3600
-    desconocidos = [m for m in a.modelos if m not in PESO]
+    desconocidos = [m for m in a.modelos if not valido(m)]
     if desconocidos:
-        sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + EXPER + GRANDE}")
+        sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + GRANDE}, con sufijos -hsv y/o -1024")
     import torch
     n_gpu = torch.cuda.device_count()
     if n_gpu == 0:
@@ -552,7 +570,15 @@ def main():
     rev = revisiones()
     nombre = a.nombre or f"{len(rev)}lotes"
     ds = Path("/tmp/ds_fresas")
-    reparto, listas = particionar(rev, ds, a.partes, sobremuestreo=a.sobremuestreo)
+    fijo = None
+    if not a.nueva_particion:   # reusar la partición guardada en GitHub, si existe, para que los resultados sean comparables
+        subprocess.run(["git", "fetch", "-q", "origin", RAMA], cwd=REPO, capture_output=True)
+        r = subprocess.run(["git", "show", f"origin/{RAMA}:benchmark/{nombre}/particion.json"], cwd=REPO,
+                           capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            fijo = {x: sp for sp, xs in json.loads(r.stdout).items() for x in xs}
+            log(f"Reuso la partición guardada de «{nombre}» ({len(fijo)} fotos); --nueva-particion para rehacerla.")
+    reparto, listas = particionar(rev, ds, a.partes, sobremuestreo=a.sobremuestreo, fijo=fijo)
     import hashlib
     huella = hashlib.sha1(json.dumps([a.partes, a.sobremuestreo, a.cls_pw, listas], sort_keys=True).encode()).hexdigest()[:12]
     sal = Path(a.salida) / nombre
