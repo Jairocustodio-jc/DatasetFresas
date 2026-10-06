@@ -97,8 +97,8 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 
 **Sin resultado todavía**
 
-- yolov10n-1024-f1: pendiente
-- yolo12n-1024-f1: pendiente
+- yolov10n-1024-f1: entrenando
+- yolo12n-1024-f1: entrenando
 - yolov10n-1024-f2: pendiente
 - yolo12n-1024-f2: pendiente
 - yolov10n-1024-f3: pendiente
