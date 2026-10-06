@@ -1,87 +1,87 @@
 {
- "yolov8n": {
-  "imgsz": 640,
-  "map50": 86.96,
-  "map50_95": 73.85,
-  "precision": 77.87,
-  "recall": 86.87,
-  "especificidad": 94.77,
+ "yolov8n-1024": {
+  "imgsz": 1024,
+  "map50": 87.97,
+  "map50_95": 75.24,
+  "precision": 80.16,
+  "recall": 86.3,
+  "especificidad": 94.47,
   "especificidad_clase": {
-   "unripe": 86.07,
-   "early-pink": 98.34,
-   "commercial-basic": 97.53,
-   "commercial-high": 95.91,
-   "overripe": 95.99
+   "unripe": 83.8,
+   "early-pink": 98.51,
+   "commercial-basic": 97.64,
+   "commercial-high": 96.35,
+   "overripe": 96.04
   },
-  "acierto_comercial": 63.8,
-  "error_critico": 19.1,
+  "acierto_comercial": 61.2,
+  "error_critico": 20.4,
   "confusion_comercial": {
    "commercial-basic": {
     "cajas": 51,
-    "bien": 52.9,
-    "early-pink": 15.7,
+    "bien": 60.8,
+    "early-pink": 13.7,
     "overripe": 0.0,
-    "otra_comercial": 31.4,
+    "otra_comercial": 25.5,
     "unripe": 0.0,
     "no_detectada": 0.0
    },
    "commercial-high": {
     "cajas": 101,
-    "bien": 69.3,
+    "bien": 61.4,
     "early-pink": 0.0,
-    "overripe": 20.8,
-    "otra_comercial": 9.9,
+    "overripe": 23.8,
+    "otra_comercial": 14.9,
     "unripe": 0.0,
     "no_detectada": 0.0
    }
   },
   "matriz_conteos": [
    [
-    758,
-    7,
+    776,
+    6,
     0,
     0,
     0,
-    71
+    87
    ],
    [
-    0,
-    66,
-    7,
-    0,
-    0,
-    14
-   ],
-   [
-    0,
+    3,
+    73,
     5,
-    28,
+    0,
+    0,
+    11
+   ],
+   [
+    0,
+    0,
+    35,
+    14,
+    0,
+    17
+   ],
+   [
+    0,
+    1,
+    11,
+    58,
+    5,
+    29
+   ],
+   [
+    0,
+    0,
+    0,
+    29,
+    168,
+    18
+   ],
+   [
     10,
-    1,
-    16
-   ],
-   [
+    4,
     0,
     0,
-    16,
-    71,
-    13,
-    22
-   ],
-   [
-    1,
-    1,
-    0,
-    20,
-    155,
-    25
-   ],
-   [
-    30,
-    5,
-    0,
-    0,
-    7,
+    3,
     0
    ]
   ]
@@ -173,22 +173,196 @@
    ]
   ]
  },
- "yolo11n": {
-  "imgsz": 640,
-  "map50": 86.88,
-  "map50_95": 72.77,
-  "precision": 80.0,
-  "recall": 79.62,
-  "especificidad": 90.38,
+ "yolov10n-1024": {
+  "imgsz": 1024,
+  "map50": 85.37,
+  "map50_95": 72.35,
+  "precision": 77.91,
+  "recall": 83.98,
+  "especificidad": 93.06,
   "especificidad_clase": {
-   "unripe": 65.74,
-   "early-pink": 95.82,
-   "commercial-basic": 97.06,
-   "commercial-high": 96.5,
-   "overripe": 96.8
+   "unripe": 78.52,
+   "early-pink": 98.43,
+   "commercial-basic": 97.59,
+   "commercial-high": 96.06,
+   "overripe": 94.7
+  },
+  "acierto_comercial": 64.5,
+  "error_critico": 22.4,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 66.7,
+    "early-pink": 7.8,
+    "overripe": 0.0,
+    "otra_comercial": 25.5,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 63.4,
+    "early-pink": 0.0,
+    "overripe": 29.7,
+    "otra_comercial": 5.9,
+    "unripe": 0.0,
+    "no_detectada": 1.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    777,
+    4,
+    0,
+    0,
+    0,
+    132
+   ],
+   [
+    2,
+    62,
+    3,
+    0,
+    0,
+    16
+   ],
+   [
+    0,
+    9,
+    35,
+    9,
+    0,
+    15
+   ],
+   [
+    0,
+    1,
+    13,
+    57,
+    10,
+    28
+   ],
+   [
+    0,
+    2,
+    0,
+    34,
+    164,
+    30
+   ],
+   [
+    10,
+    6,
+    0,
+    1,
+    2,
+    0
+   ]
+  ]
+ },
+ "yolo11n-1024": {
+  "imgsz": 1024,
+  "map50": 89.0,
+  "map50_95": 76.06,
+  "precision": 85.79,
+  "recall": 78.24,
+  "especificidad": 93.19,
+  "especificidad_clase": {
+   "unripe": 77.03,
+   "early-pink": 98.2,
+   "commercial-basic": 97.8,
+   "commercial-high": 95.82,
+   "overripe": 97.1
+  },
+  "acierto_comercial": 75.6,
+  "error_critico": 10.6,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 68.6,
+    "early-pink": 2.0,
+    "overripe": 0.0,
+    "otra_comercial": 29.4,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 79.2,
+    "early-pink": 1.0,
+    "overripe": 13.9,
+    "otra_comercial": 5.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    778,
+    10,
+    0,
+    0,
+    0,
+    134
+   ],
+   [
+    1,
+    61,
+    2,
+    1,
+    0,
+    20
+   ],
+   [
+    0,
+    7,
+    32,
+    8,
+    0,
+    15
+   ],
+   [
+    0,
+    0,
+    17,
+    79,
+    14,
+    24
+   ],
+   [
+    0,
+    1,
+    0,
+    13,
+    158,
+    22
+   ],
+   [
+    10,
+    5,
+    0,
+    0,
+    4,
+    0
+   ]
+  ]
+ },
+ "yolo12n-1024": {
+  "imgsz": 1024,
+  "map50": 85.71,
+  "map50_95": 72.91,
+  "precision": 80.01,
+  "recall": 84.22,
+  "especificidad": 92.41,
+  "especificidad_clase": {
+   "unripe": 74.52,
+   "early-pink": 98.12,
+   "commercial-basic": 96.89,
+   "commercial-high": 95.38,
+   "overripe": 97.13
   },
   "acierto_comercial": 72.4,
-  "error_critico": 14.5,
+  "error_critico": 12.5,
   "confusion_comercial": {
    "commercial-basic": {
     "cajas": 51,
@@ -202,172 +376,85 @@
    "commercial-high": {
     "cajas": 101,
     "bien": 70.3,
-    "early-pink": 1.0,
-    "overripe": 15.8,
-    "otra_comercial": 12.9,
-    "unripe": 0.0,
-    "no_detectada": 0.0
-   }
-  },
-  "matriz_conteos": [
-   [
-    772,
-    6,
-    0,
-    0,
-    0,
-    277
-   ],
-   [
-    6,
-    62,
-    3,
-    1,
-    0,
-    54
-   ],
-   [
-    0,
-    10,
-    40,
-    11,
-    1,
-    24
-   ],
-   [
-    0,
-    0,
-    8,
-    73,
-    16,
-    29
-   ],
-   [
-    0,
-    0,
-    0,
-    16,
-    156,
-    30
-   ],
-   [
-    11,
-    6,
-    0,
-    0,
-    3,
-    0
-   ]
-  ]
- },
- "yolo26n": {
-  "imgsz": 640,
-  "map50": 87.47,
-  "map50_95": 74.44,
-  "precision": 83.92,
-  "recall": 84.54,
-  "especificidad": 93.41,
-  "especificidad_clase": {
-   "unripe": 76.55,
-   "early-pink": 99.0,
-   "commercial-basic": 97.45,
-   "commercial-high": 96.03,
-   "overripe": 98.02
-  },
-  "acierto_comercial": 77.0,
-  "error_critico": 7.9,
-  "confusion_comercial": {
-   "commercial-basic": {
-    "cajas": 51,
-    "bien": 84.3,
-    "early-pink": 3.9,
-    "overripe": 0.0,
-    "otra_comercial": 11.8,
-    "unripe": 0.0,
-    "no_detectada": 0.0
-   },
-   "commercial-high": {
-    "cajas": 101,
-    "bien": 73.3,
     "early-pink": 0.0,
-    "overripe": 9.9,
-    "otra_comercial": 16.8,
+    "overripe": 13.9,
+    "otra_comercial": 15.8,
     "unripe": 0.0,
     "no_detectada": 0.0
    }
   },
   "matriz_conteos": [
    [
-    776,
-    8,
+    773,
+    5,
     0,
     0,
     0,
-    132
+    167
    ],
    [
-    0,
-    64,
-    2,
-    0,
-    0,
-    11
-   ],
-   [
-    0,
-    6,
-    41,
-    15,
-    1,
-    12
-   ],
-   [
+    3,
+    68,
+    5,
     0,
     1,
-    8,
-    75,
-    24,
+    17
+   ],
+   [
+    0,
+    5,
+    43,
+    20,
+    1,
     18
    ],
    [
     0,
     1,
+    3,
+    66,
+    20,
+    39
+   ],
+   [
     0,
-    11,
-    149,
-    12
+    0,
+    0,
+    15,
+    153,
+    22
    ],
    [
     13,
-    4,
+    5,
     0,
     0,
-    2,
+    1,
     0
    ]
   ]
  },
- "yolo11n-hsv-1024": {
+ "yolo26n-1024": {
   "imgsz": 1024,
-  "map50": 86.56,
-  "map50_95": 74.02,
-  "precision": 81.96,
-  "recall": 83.47,
-  "especificidad": 94.68,
+  "map50": 87.81,
+  "map50_95": 74.94,
+  "precision": 83.15,
+  "recall": 83.18,
+  "especificidad": 95.03,
   "especificidad_clase": {
-   "unripe": 84.32,
-   "early-pink": 98.65,
-   "commercial-basic": 97.06,
-   "commercial-high": 95.25,
-   "overripe": 98.12
+   "unripe": 85.48,
+   "early-pink": 99.28,
+   "commercial-basic": 97.74,
+   "commercial-high": 96.1,
+   "overripe": 96.54
   },
-  "acierto_comercial": 79.0,
-  "error_critico": 6.6,
+  "acierto_comercial": 75.0,
+  "error_critico": 13.2,
   "confusion_comercial": {
    "commercial-basic": {
     "cajas": 51,
-    "bien": 74.5,
-    "early-pink": 3.9,
+    "bien": 76.5,
+    "early-pink": 2.0,
     "overripe": 0.0,
     "otra_comercial": 21.6,
     "unripe": 0.0,
@@ -375,61 +462,61 @@
    },
    "commercial-high": {
     "cajas": 101,
-    "bien": 81.2,
-    "early-pink": 1.0,
-    "overripe": 6.9,
-    "otra_comercial": 10.9,
+    "bien": 74.3,
+    "early-pink": 0.0,
+    "overripe": 18.8,
+    "otra_comercial": 6.9,
     "unripe": 0.0,
     "no_detectada": 0.0
    }
   },
   "matriz_conteos": [
    [
-    774,
-    8,
+    772,
+    7,
     0,
     0,
     0,
-    79
-   ],
-   [
-    1,
-    63,
-    3,
-    1,
-    0,
-    12
+    72
    ],
    [
     0,
-    8,
+    60,
+    2,
+    0,
+    0,
+    7
+   ],
+   [
+    0,
+    9,
     36,
-    11,
-    1,
-    18
+    7,
+    0,
+    13
    ],
    [
     0,
     0,
+    13,
+    72,
     12,
-    83,
-    28,
-    19
+    23
    ],
    [
     0,
     1,
     0,
-    6,
-    142,
-    15
+    22,
+    160,
+    17
    ],
    [
-    14,
+    17,
+    7,
+    0,
+    0,
     4,
-    0,
-    0,
-    5,
     0
    ]
   ]
@@ -514,6 +601,180 @@
    [
     10,
     5,
+    0,
+    0,
+    2,
+    0
+   ]
+  ]
+ },
+ "yolov9e": {
+  "imgsz": 640,
+  "map50": 89.09,
+  "map50_95": 75.28,
+  "precision": 82.3,
+  "recall": 87.51,
+  "especificidad": 95.21,
+  "especificidad_clase": {
+   "unripe": 86.87,
+   "early-pink": 98.65,
+   "commercial-basic": 97.53,
+   "commercial-high": 95.9,
+   "overripe": 97.09
+  },
+  "acierto_comercial": 77.0,
+  "error_critico": 10.5,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 72.5,
+    "early-pink": 7.8,
+    "overripe": 0.0,
+    "otra_comercial": 19.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 79.2,
+    "early-pink": 2.0,
+    "overripe": 9.9,
+    "otra_comercial": 8.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    770,
+    4,
+    0,
+    0,
+    0,
+    69
+   ],
+   [
+    0,
+    69,
+    3,
+    1,
+    0,
+    13
+   ],
+   [
+    0,
+    5,
+    38,
+    12,
+    2,
+    13
+   ],
+   [
+    0,
+    1,
+    10,
+    77,
+    13,
+    27
+   ],
+   [
+    0,
+    1,
+    0,
+    11,
+    161,
+    22
+   ],
+   [
+    19,
+    4,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolov10x": {
+  "imgsz": 640,
+  "map50": 85.97,
+  "map50_95": 73.21,
+  "precision": 77.44,
+  "recall": 87.15,
+  "especificidad": 94.96,
+  "especificidad_clase": {
+   "unripe": 83.74,
+   "early-pink": 98.87,
+   "commercial-basic": 97.55,
+   "commercial-high": 96.63,
+   "overripe": 97.99
+  },
+  "acierto_comercial": 72.4,
+  "error_critico": 13.1,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 74.5,
+    "early-pink": 5.9,
+    "overripe": 0.0,
+    "otra_comercial": 19.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 71.3,
+    "early-pink": 1.0,
+    "overripe": 15.8,
+    "otra_comercial": 11.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    772,
+    5,
+    0,
+    0,
+    0,
+    81
+   ],
+   [
+    2,
+    60,
+    2,
+    1,
+    0,
+    9
+   ],
+   [
+    0,
+    12,
+    37,
+    12,
+    0,
+    7
+   ],
+   [
+    0,
+    2,
+    12,
+    72,
+    13,
+    14
+   ],
+   [
+    0,
+    1,
+    0,
+    16,
+    161,
+    6
+   ],
+   [
+    15,
+    4,
     0,
     0,
     2,
@@ -608,89 +869,89 @@
    ]
   ]
  },
- "yolov9e": {
+ "yolo12x": {
   "imgsz": 640,
-  "map50": 89.09,
-  "map50_95": 75.28,
-  "precision": 82.3,
-  "recall": 87.51,
-  "especificidad": 95.21,
+  "map50": 89.19,
+  "map50_95": 76.41,
+  "precision": 81.33,
+  "recall": 88.54,
+  "especificidad": 94.8,
   "especificidad_clase": {
-   "unripe": 86.87,
-   "early-pink": 98.65,
-   "commercial-basic": 97.53,
-   "commercial-high": 95.9,
-   "overripe": 97.09
+   "unripe": 84.28,
+   "early-pink": 98.03,
+   "commercial-basic": 97.7,
+   "commercial-high": 96.81,
+   "overripe": 97.2
   },
-  "acierto_comercial": 77.0,
-  "error_critico": 10.5,
+  "acierto_comercial": 72.3,
+  "error_critico": 12.5,
   "confusion_comercial": {
    "commercial-basic": {
     "cajas": 51,
-    "bien": 72.5,
-    "early-pink": 7.8,
+    "bien": 66.7,
+    "early-pink": 9.8,
     "overripe": 0.0,
-    "otra_comercial": 19.6,
+    "otra_comercial": 23.5,
     "unripe": 0.0,
     "no_detectada": 0.0
    },
    "commercial-high": {
     "cajas": 101,
-    "bien": 79.2,
+    "bien": 75.2,
     "early-pink": 2.0,
-    "overripe": 9.9,
-    "otra_comercial": 8.9,
+    "overripe": 11.9,
+    "otra_comercial": 10.9,
     "unripe": 0.0,
     "no_detectada": 0.0
    }
   },
   "matriz_conteos": [
    [
-    770,
+    777,
     4,
     0,
     0,
     0,
-    69
+    85
    ],
    [
-    0,
-    69,
-    3,
-    1,
-    0,
-    13
-   ],
-   [
-    0,
-    5,
-    38,
-    12,
     2,
-    13
+    68,
+    5,
+    0,
+    0,
+    18
    ],
    [
     0,
+    6,
+    36,
+    11,
     1,
+    12
+   ],
+   [
+    0,
+    0,
     10,
-    77,
-    13,
-    27
+    79,
+    12,
+    18
    ],
    [
     0,
     1,
     0,
     11,
-    161,
-    22
+    162,
+    21
    ],
    [
-    19,
-    4,
+    10,
+    5,
     0,
     0,
-    0,
+    1,
     0
    ]
   ]
