@@ -1,0 +1,72 @@
+{
+ "modelo": "yolov9t-1024-f1",
+ "tamaño": "nano",
+ "gpu": "Tesla T4",
+ "epochs_max": 100,
+ "imgsz": 1024,
+ "hsv_h": 0.0,
+ "estado": "completo",
+ "parado_por_tiempo": false,
+ "batch": 8,
+ "epochs_hechas": 41,
+ "mejor_epoch": 21,
+ "minutos": 46.0,
+ "val_map50": 0.8858,
+ "val_map50_95": 0.7566,
+ "val_precision": 0.7976,
+ "val_recall": 0.856,
+ "val_ap50_por_clase": {
+  "unripe": 0.9713,
+  "early-pink": 0.8832,
+  "commercial-basic": 0.7632,
+  "commercial-high": 0.8625,
+  "overripe": 0.9486
+ },
+ "map50": 0.8882,
+ "map50_95": 0.7585,
+ "precision": 0.8425,
+ "recall": 0.8335,
+ "ap50_por_clase": {
+  "unripe": 0.9831,
+  "early-pink": 0.8845,
+  "commercial-basic": 0.7565,
+  "commercial-high": 0.8567,
+  "overripe": 0.9604
+ },
+ "acierto_comercial_cm": 33.6,
+ "error_critico_cm": 30.9,
+ "confusion_comercial": {
+  "commercial-basic": {
+   "cajas": 51,
+   "bien": 72.5,
+   "early-pink": 5.9,
+   "overripe": 0.0,
+   "otra_comercial": 21.6,
+   "unripe": 0.0,
+   "no_detectada": 0.0
+  },
+  "commercial-high": {
+   "cajas": 101,
+   "bien": 77.2,
+   "early-pink": 0.0,
+   "overripe": 13.9,
+   "otra_comercial": 8.9,
+   "unripe": 0.0,
+   "no_detectada": 0.0
+  }
+ },
+ "acierto_comercial": 75.6,
+ "error_critico": 11.2,
+ "inferencia_ms": 10.28,
+ "especificidad": 94.31,
+ "especificidad_clase": {
+  "unripe": 82.27,
+  "early-pink": 98.74,
+  "commercial-basic": 97.77,
+  "commercial-high": 96.09,
+  "overripe": 96.69
+ },
+ "params_M": 2.01,
+ "gflops": 7.9,
+ "peso_MB": 4.7
+}
