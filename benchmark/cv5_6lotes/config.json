@@ -71,21 +71,16 @@
  },
  "cls_pw": 0.5,
  "modelos": [
-  "yolov9t-1024-f1",
-  "yolo26n-f1",
-  "yolo11n-1024-f1",
-  "yolov9t-1024-f2",
-  "yolo26n-f2",
-  "yolo11n-1024-f2",
-  "yolov9t-1024-f3",
-  "yolo26n-f3",
-  "yolo11n-1024-f3",
-  "yolov9t-1024-f4",
-  "yolo26n-f4",
-  "yolo11n-1024-f4",
-  "yolov9t-1024-f5",
-  "yolo26n-f5",
-  "yolo11n-1024-f5"
+  "yolov10n-1024-f1",
+  "yolo12n-1024-f1",
+  "yolov10n-1024-f2",
+  "yolo12n-1024-f2",
+  "yolov10n-1024-f3",
+  "yolo12n-1024-f3",
+  "yolov10n-1024-f4",
+  "yolo12n-1024-f4",
+  "yolov10n-1024-f5",
+  "yolo12n-1024-f5"
  ],
  "epochs": 100,
  "horas": 11.0,
@@ -95,5 +90,5 @@
   0.15
  ],
  "huella_particion": "42a74935bb54",
- "inicio": "2026-10-06 16:48"
+ "inicio": "2026-10-06 23:05"
 }
