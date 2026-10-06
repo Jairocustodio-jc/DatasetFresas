@@ -71,6 +71,7 @@ def ajustes(m):
     """Peso base, tamaño de imagen y aumento de tono de cada entrada de la cola."""
     return m.split("-")[0], (1024 if "1024" in m else 640), (0.015 if "hsv" in m else 0.0)
 REPO = Path(__file__).resolve().parent.parent
+ORD_ = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
 sys.path.insert(0, str(REPO / "modelos"))
 
 
@@ -174,6 +175,61 @@ def particionar(rev, destino, partes=(0.70, 0.15, 0.15), semilla=0, sobremuestre
     return tabla, {sp: sorted(v) for sp, v in listas.items()}
 
 
+def repartir_folds(ds, listas, K, semilla=0):
+    """Reparte train+val (sin las copias de sobremuestreo) en K folds, estratificando por estado (cajas) y por lote."""
+    import random
+    random.seed(semilla)
+    fotos = [(sp, x) for sp in ("train", "val") for x in listas[sp] if "_rep" not in x]
+    lotes = sorted({x.split("_")[0] + "_" + x.split("_")[1] for _, x in fotos})
+    vec = {}
+    for sp, x in fotos:
+        v = [0] * (5 + len(lotes))
+        for l in (ds / "labels" / sp / f"{Path(x).stem}.txt").read_text().split("\n"):
+            if l.strip():
+                v[int(l.split()[0])] += 1
+        v[5 + lotes.index("_".join(x.split("_")[:2]))] = 1
+        vec[x] = v
+    xs = [x for _, x in fotos]
+    random.shuffle(xs)
+    tot = [sum(vec[x][k] for x in xs) for k in range(len(vec[xs[0]]))]
+    falta = [[t / K for t in tot] for _ in range(K)]
+    falta_n = [len(xs) / K] * K
+    asign, pend = {}, set(xs)
+    while pend:
+        resto = [sum(vec[x][k] for x in pend) for k in range(len(tot))]
+        k = min((i for i in range(len(tot)) if resto[i] > 0), key=lambda i: resto[i], default=None)
+        for x in [x for x in xs if x in pend and (k is None or vec[x][k] > 0)]:
+            f = max(range(K), key=lambda f: ((falta[f][k] if k is not None else 0), falta_n[f]))
+            asign[x] = f + 1
+            falta_n[f] -= 1
+            for i, c in enumerate(vec[x]):
+                falta[f][i] -= c
+            pend.discard(x)
+    return {str(f): sorted(x for x in xs if asign[x] == f) for f in range(1, K + 1)}
+
+
+def armar_fold(ds, folds, k, d, sobremuestreo):
+    """Dataset del fold k: val = fold k, train = los demás folds (con sobremuestreo comercial), test = el test fijo."""
+    shutil.rmtree(d, ignore_errors=True)
+    origen = {x: sp for sp in ("train", "val", "test") for x in (p.name for p in (ds / "images" / sp).iterdir())}
+    partes = {"val": folds[str(k)], "test": [x for x, sp in origen.items() if sp == "test"],
+              "train": [x for f, xs in folds.items() if f != str(k) for x in xs]}
+    for sp, xs in partes.items():
+        (d / "images" / sp).mkdir(parents=True)
+        (d / "labels" / sp).mkdir(parents=True)
+        for x in xs:
+            st = Path(x).stem
+            lab = (ds / "labels" / origen[x] / f"{st}.txt").read_text()
+            copias = [st]
+            if sp == "train" and any(int(l.split()[0]) in (2, 3) for l in lab.split("\n") if l.strip()):
+                copias += [f"{st}_rep{r}" for r in range(1, sobremuestreo)]
+            for c in copias:
+                os.link(ds / "images" / origen[x] / x, d / "images" / sp / f"{c}.jpg")
+                (d / "labels" / sp / f"{c}.txt").write_text(lab)
+    (d / "data.yaml").write_text(f"path: {d.resolve()}\ntrain: images/train\nval: images/val\ntest: images/test\n"
+                                 f"names: {ORD_}\n")
+
+
 def tabla_reparto(tab):
     """Tabla en markdown con el % de fotos y de cajas de cada estado en cada parte."""
     from kaggle_fresas import ORD
@@ -197,6 +253,7 @@ def worker(a):
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu"
     a.dev = 0 if torch.cuda.is_available() else "cpu"
     log(f"[GPU {a.gpu}] {gpu}")
+    plantilla = a.data   # en validación cruzada lleva «{f}», que se reemplaza por el fold de cada trabajo
     while True:
         hechos = {p.stem[4:] for p in sal.glob("res_*.json")}
         pend = [m for m in a.modelos if m not in hechos]
@@ -217,6 +274,7 @@ def worker(a):
             continue
         carga = sum(peso(x) for x in pend) / n_gpu
         tope = min(resta, resta * peso(m) / max(carga, peso(m)))
+        a.data = plantilla.replace("{f}", m.rsplit("-f", 1)[1]) if "-f" in m else plantilla
         entrenar(m, a, sal, tope, fin, gpu, YOLO)
         torch.cuda.empty_cache()
 
@@ -279,6 +337,14 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
                 res |= {"acierto_comercial_cm": cm.get("acierto_comercial"), "error_critico_cm": cm.get("error_critico")}
                 res |= comercial_top1(mb, Path(a.data).parent, imgsz, a.dev)       # la métrica principal
         res["inferencia_ms"] = round(float(v.speed.get("inference", 0)), 2)
+        from kaggle_metricas import matriz   # matriz propia con criterio fijo (conf 0,25, IoU 0,45)
+        M = matriz(mb, Path(a.data).parent, imgsz, a.dev).astype(float)
+        E = {}
+        for c in range(M.shape[0] - 1):
+            tp = M[c, c]
+            fp, fn = M[c, :].sum() - tp, M[:, c].sum() - tp
+            E[ORD_[c]] = round(100 * (M.sum() - tp - fp - fn) / (M.sum() - tp - fn), 2)
+        res |= {"especificidad": round(sum(E.values()) / len(E), 2), "especificidad_clase": E}
         from ultralytics.utils.torch_utils import get_flops, get_num_params
         res |= {"params_M": round(get_num_params(mb.model) / 1e6, 2), "gflops": round(float(get_flops(mb.model, 640)), 1)}
     except Exception as e:
@@ -514,6 +580,22 @@ def resumen(sal, modelos, info):
                 r = exp[m]
                 t.append(f"| {m} | {r.get('hsv_h', 0.0)} | {r.get('imgsz', 640)} | {r.get('acierto_comercial')} % "
                          f"| {r.get('error_critico')} % | {r['map50_95']:.3f} | {r.get('inferencia_ms', '')} |")
+    cv = {}
+    for r in ok:
+        if "-f" in r["modelo"]:
+            cv.setdefault(r["modelo"].rsplit("-f", 1)[0], []).append(r)
+    if cv:
+        import statistics as st
+        def ms(rs, k, f=1):
+            v = [f * r[k] for r in rs if r.get(k) is not None]
+            return (f"{st.mean(v):.1f} ± {st.stdev(v):.1f}" if len(v) > 1 else f"{v[0]:.1f}") if v else "–"
+        t += ["", "**Validación cruzada: media ± desviación entre folds, medida en el test fijo**", "",
+              "| Modelo | Folds | mAP@0.5 | mAP@0.5:0.95 | Precisión | Recall | Especif. | Acierto com. | Error crít. | mAP@0.5 (val del fold) |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+        for m, rs in sorted(cv.items(), key=lambda x: -sum(r.get("acierto_comercial") or 0 for r in x[1]) / len(x[1])):
+            t.append(f"| {m} | {len(rs)} | {ms(rs, 'map50', 100)} | {ms(rs, 'map50_95', 100)} | {ms(rs, 'precision', 100)} | "
+                     f"{ms(rs, 'recall', 100)} | {ms(rs, 'especificidad')} | {ms(rs, 'acierto_comercial')} | "
+                     f"{ms(rs, 'error_critico')} | {ms(rs, 'val_map50', 100)} |")
     otros = [r for r in filas if r.get("map50_95") is None]
     if otros:
         t += ["", "**Sin resultado todavía**", ""] + [f"- {r['modelo']}: {r.get('estado')}"
@@ -537,6 +619,9 @@ def main():
     ap.add_argument("--secreto", default=None, help="nombre del secreto de Kaggle con el token de GitHub")
     ap.add_argument("--partes", type=float, nargs=3, default=[0.70, 0.15, 0.15], metavar=("TRAIN", "VAL", "TEST"),
                     help="proporción de fotos para train, validación y test (por defecto 0.70 0.15 0.15)")
+    ap.add_argument("--cv", type=int, default=0, metavar="K",
+                    help="validación cruzada de K folds: test fijo de la corrida --particion-de y K folds sobre el resto")
+    ap.add_argument("--particion-de", default="6lotes", help="corrida cuya partición (y test) se reusa en --cv")
     ap.add_argument("--nueva-particion", action="store_true",
                     help="rehacer la partición con todas las fotos revisadas (por defecto reusa la de la corrida guardada)")
     ap.add_argument("--sobremuestreo", type=int, default=2,
@@ -556,7 +641,7 @@ def main():
 
     inicio = time.time()
     fin = inicio + a.horas * 3600
-    desconocidos = [m for m in a.modelos if not valido(m)]
+    desconocidos = [m for m in a.modelos if not valido(m.rsplit("-f", 1)[0] if a.cv else m)]
     if desconocidos:
         sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + GRANDE}, con sufijos -hsv y/o -1024")
     import torch
@@ -568,17 +653,24 @@ def main():
 
     from kaggle_fresas import revisiones
     rev = revisiones()
-    nombre = a.nombre or f"{len(rev)}lotes"
+    nombre = a.nombre or (f"cv{a.cv}_{a.particion_de}" if a.cv else f"{len(rev)}lotes")
+    origen = a.particion_de if a.cv else nombre
     ds = Path("/tmp/ds_fresas")
     fijo = None
-    if not a.nueva_particion:   # reusar la partición guardada en GitHub, si existe, para que los resultados sean comparables
+    if a.cv or not a.nueva_particion:   # reusar la partición guardada en GitHub, si existe, para que los resultados sean comparables
         subprocess.run(["git", "fetch", "-q", "origin", RAMA], cwd=REPO, capture_output=True)
-        r = subprocess.run(["git", "show", f"origin/{RAMA}:benchmark/{nombre}/particion.json"], cwd=REPO,
+        r = subprocess.run(["git", "show", f"origin/{RAMA}:benchmark/{origen}/particion.json"], cwd=REPO,
                            capture_output=True, text=True)
         if r.returncode == 0 and r.stdout.strip():
             fijo = {x: sp for sp, xs in json.loads(r.stdout).items() for x in xs}
-            log(f"Reuso la partición guardada de «{nombre}» ({len(fijo)} fotos); --nueva-particion para rehacerla.")
+            log(f"Reuso la partición guardada de «{origen}» ({len(fijo)} fotos).")
+        elif a.cv:
+            sys.exit(f"--cv necesita la partición guardada de «{origen}» en la rama {RAMA}.")
     reparto, listas = particionar(rev, ds, a.partes, sobremuestreo=a.sobremuestreo, fijo=fijo)
+    if a.cv:
+        folds = repartir_folds(ds, listas, a.cv)
+        listas = {"test": listas["test"], "folds": folds}
+        a.modelos = [f"{m}-f{k}" for k in range(1, a.cv + 1) for m in a.modelos]   # fold por fold: así todos avanzan parejo
     import hashlib
     huella = hashlib.sha1(json.dumps([a.partes, a.sobremuestreo, a.cls_pw, listas], sort_keys=True).encode()).hexdigest()[:12]
     sal = Path(a.salida) / nombre
@@ -600,7 +692,11 @@ def main():
     escribir(sal / "particion.json", listas)
     log("Reparto (fotos y % de cajas por estado):\n" + "\n".join(tabla_reparto(reparto)))
     datas = []
-    for g in range(n_gpu):   # una copia por GPU: así no chocan al escribir la caché de etiquetas
+    for g in range(n_gpu if a.cv else 0):   # validación cruzada: un dataset por fold y por GPU (imágenes enlazadas)
+        for k in range(1, a.cv + 1):
+            armar_fold(ds, folds, k, Path(f"/tmp/cv_g{g}/f{k}"), a.sobremuestreo)
+        datas.append(f"/tmp/cv_g{g}/f{{f}}/data.yaml")
+    for g in range(0 if a.cv else n_gpu):   # una copia por GPU: así no chocan al escribir la caché de etiquetas
         d = Path(f"/tmp/ds_fresas_g{g}")
         shutil.rmtree(d, ignore_errors=True)
         shutil.copytree(ds, d)
