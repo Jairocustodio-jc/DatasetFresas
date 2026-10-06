@@ -1,0 +1,99 @@
+{
+ "nombre": "cv5_6lotes",
+ "lotes": [
+  "lote_01",
+  "lote_02",
+  "lote_03",
+  "lote_04",
+  "lote_05",
+  "lote_06"
+ ],
+ "fotos": 1564,
+ "gpus": "Tesla T4, Tesla T4",
+ "reparto": {
+  "train": {
+   "fotos": 1094,
+   "copias_extra": 564,
+   "cajas": {
+    "unripe": 3777,
+    "early-pink": 393,
+    "commercial-basic": 240,
+    "commercial-high": 470,
+    "overripe": 785
+   },
+   "por_lote": {
+    "lote_01": 207,
+    "lote_02": 208,
+    "lote_03": 210,
+    "lote_04": 209,
+    "lote_05": 207,
+    "lote_06": 53
+   }
+  },
+  "val": {
+   "fotos": 235,
+   "copias_extra": 0,
+   "cajas": {
+    "unripe": 844,
+    "early-pink": 84,
+    "commercial-basic": 52,
+    "commercial-high": 101,
+    "overripe": 174
+   },
+   "por_lote": {
+    "lote_01": 44,
+    "lote_02": 44,
+    "lote_03": 45,
+    "lote_04": 45,
+    "lote_05": 45,
+    "lote_06": 12
+   }
+  },
+  "test": {
+   "fotos": 235,
+   "copias_extra": 0,
+   "cajas": {
+    "unripe": 789,
+    "early-pink": 84,
+    "commercial-basic": 51,
+    "commercial-high": 101,
+    "overripe": 176
+   },
+   "por_lote": {
+    "lote_01": 45,
+    "lote_02": 45,
+    "lote_03": 45,
+    "lote_04": 45,
+    "lote_05": 44,
+    "lote_06": 11
+   }
+  }
+ },
+ "cls_pw": 0.5,
+ "modelos": [
+  "yolov9t-1024-f1",
+  "yolo26n-f1",
+  "yolo11n-1024-f1",
+  "yolov9t-1024-f2",
+  "yolo26n-f2",
+  "yolo11n-1024-f2",
+  "yolov9t-1024-f3",
+  "yolo26n-f3",
+  "yolo11n-1024-f3",
+  "yolov9t-1024-f4",
+  "yolo26n-f4",
+  "yolo11n-1024-f4",
+  "yolov9t-1024-f5",
+  "yolo26n-f5",
+  "yolo11n-1024-f5"
+ ],
+ "epochs": 100,
+ "horas": 11.0,
+ "partes": [
+  0.7,
+  0.15,
+  0.15
+ ],
+ "huella_particion": "42a74935bb54",
+ "inicio": "2026-10-06 16:46"
+}
