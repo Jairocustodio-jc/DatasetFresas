@@ -9,7 +9,8 @@
 
 Descarga los pesos del release benchmark-6lotes, rearma el test con la partición guardada (rama yolo-benchmark) y por modelo:
   - mAP@0.5, mAP@0.5:0.95, precisión y recall (Ultralytics, split test);
-  - especificidad por clase E = TN / (TN + FP), desde la matriz de confusión en conteos (confianza ≥ 0,25, IoU ≥ 0,45);
+  - especificidad por clase E = TN / (TN + FP), desde una matriz de confusión en conteos propia, con criterio fijo
+    (confianza ≥ 0,25, IoU ≥ 0,45), para no depender de la versión de Ultralytics;
   - acierto comercial y error crítico (predicción más segura por fresa comercial, IoU ≥ 0,5, confianza ≥ 0,25).
 Guarda /kaggle/working/test_metricas/ (metricas.json + matrices de confusión) y lo sube a la rama yolo-benchmark,
 carpeta benchmark/6lotes/test_metricas/, con el token de los Secrets (GITHUB_TOKEN o key_gh_strawberry).
@@ -28,6 +29,40 @@ REPO = Path(__file__).resolve().parent.parent
 GH = "Jairocustodio-jc/DatasetFresas"
 POR_DEFECTO = ["yolov8n", "yolov9t-1024", "yolo11n", "yolo26n", "yolo11n-hsv-1024",
                "yolov8x", "yolo11x", "yolov9e", "yolo26x"]
+
+
+def matriz(mod, ds, imgsz, dev, conf=0.25, iou_min=0.45):
+    """Matriz de confusión [predicho, real] en conteos con criterio fijo (la de Ultralytics cambia según la versión).
+
+    Por foto: detecciones con confianza ≥ conf; se emparejan con las cajas reales por IoU ≥ iou_min, de mayor a menor IoU,
+    cada caja a lo sumo una vez. Real sin pareja → fila «fondo» (no detectada); detección sin pareja → columna «fondo»."""
+    from kaggle_fresas import iou
+    nc = 5
+    M = np.zeros((nc + 1, nc + 1), int)
+    for p in sorted((ds / "images" / "test").iterdir()):
+        r = mod.predict(str(p), imgsz=imgsz, conf=conf, device=dev, verbose=False)[0]
+        W, H = r.orig_shape[1], r.orig_shape[0]
+        pr = [([b[0]/W, b[1]/H, b[2]/W, b[3]/H], int(c)) for b, c in zip(r.boxes.xyxy.tolist(), r.boxes.cls.tolist())]
+        gt = []
+        for l in (ds / "labels" / "test" / f"{p.stem}.txt").read_text().split("\n"):
+            if l.strip():
+                c, x, y, w, h = map(float, l.split())
+                gt.append(([x-w/2, y-h/2, x+w/2, y+h/2], int(c)))
+        pares = sorted(((iou(g[0], q[0]), i, j) for i, g in enumerate(gt) for j, q in enumerate(pr)), reverse=True)
+        ug, up = set(), set()
+        for v, i, j in pares:
+            if v < iou_min:
+                break
+            if i not in ug and j not in up:
+                ug.add(i); up.add(j)
+                M[pr[j][1], gt[i][1]] += 1
+        for i, g in enumerate(gt):
+            if i not in ug:
+                M[nc, g[1]] += 1
+        for j, q in enumerate(pr):
+            if j not in up:
+                M[q[1], nc] += 1
+    return M
 
 
 def subir(carpeta, tok):
@@ -75,12 +110,12 @@ def main():
         mod = YOLO(str(p))
         v = mod.val(data=str(S / "ds" / "data.yaml"), split="test", imgsz=z, batch=8, device=dev, plots=True,
                     verbose=False, project=str(S / "val"), name=m, exist_ok=True)
-        M = v.confusion_matrix.matrix.astype(float)
+        M = matriz(mod, S / "ds", z, dev).astype(float)
         tot, E = M.sum(), {}
         for c in range(M.shape[0] - 1):
             tp = M[c, c]
             fp, fn = M[c, :].sum() - tp, M[:, c].sum() - tp
-            E[v.names[c]] = round(100 * (tot - tp - fp - fn) / (tot - tp - fn), 2)
+            E[kf.ORD[c]] = round(100 * (tot - tp - fp - fn) / (tot - tp - fn), 2)
         com = kb.comercial_top1(mod, S / "ds", z, dev)
         out[m] = {"imgsz": z, "map50": round(100 * float(v.box.map50), 2), "map50_95": round(100 * float(v.box.map), 2),
                   "precision": round(100 * float(v.box.mp), 2), "recall": round(100 * float(v.box.mr), 2),
