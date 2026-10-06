@@ -1,0 +1,785 @@
+{
+ "yolov8n": {
+  "imgsz": 640,
+  "map50": 86.96,
+  "map50_95": 73.85,
+  "precision": 77.87,
+  "recall": 86.87,
+  "especificidad": 82.26,
+  "especificidad_clase": {
+   "unripe": 40.68,
+   "early-pink": 92.93,
+   "commercial-basic": 94.99,
+   "commercial-high": 93.23,
+   "overripe": 89.48
+  },
+  "acierto_comercial": 63.8,
+  "error_critico": 19.1,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 52.9,
+    "early-pink": 15.7,
+    "overripe": 0.0,
+    "otra_comercial": 31.4,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 69.3,
+    "early-pink": 0.0,
+    "overripe": 20.8,
+    "otra_comercial": 9.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    732,
+    28,
+    0,
+    1,
+    9,
+    1859
+   ],
+   [
+    47,
+    31,
+    16,
+    8,
+    1,
+    204
+   ],
+   [
+    1,
+    13,
+    19,
+    28,
+    7,
+    148
+   ],
+   [
+    2,
+    7,
+    12,
+    45,
+    39,
+    203
+   ],
+   [
+    5,
+    1,
+    4,
+    19,
+    120,
+    372
+   ],
+   [
+    2,
+    4,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolov9t-1024": {
+  "imgsz": 1024,
+  "map50": 90.48,
+  "map50_95": 77.84,
+  "precision": 84.94,
+  "recall": 86.42,
+  "especificidad": 81.64,
+  "especificidad_clase": {
+   "unripe": 44.87,
+   "early-pink": 89.62,
+   "commercial-basic": 93.21,
+   "commercial-high": 89.26,
+   "overripe": 91.26
+  },
+  "acierto_comercial": 79.0,
+  "error_critico": 7.9,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 74.5,
+    "early-pink": 3.9,
+    "overripe": 0.0,
+    "otra_comercial": 21.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 81.2,
+    "early-pink": 0.0,
+    "overripe": 9.9,
+    "otra_comercial": 8.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    654,
+    28,
+    13,
+    6,
+    5,
+    1823
+   ],
+   [
+    103,
+    21,
+    12,
+    5,
+    1,
+    305
+   ],
+   [
+    6,
+    21,
+    12,
+    21,
+    8,
+    225
+   ],
+   [
+    25,
+    11,
+    9,
+    31,
+    65,
+    329
+   ],
+   [
+    1,
+    0,
+    5,
+    38,
+    97,
+    307
+   ],
+   [
+    0,
+    3,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolo11n": {
+  "imgsz": 640,
+  "map50": 86.88,
+  "map50_95": 72.77,
+  "precision": 80.0,
+  "recall": 79.62,
+  "especificidad": 80.23,
+  "especificidad_clase": {
+   "unripe": 32.18,
+   "early-pink": 84.36,
+   "commercial-basic": 95.92,
+   "commercial-high": 94.5,
+   "overripe": 94.18
+  },
+  "acierto_comercial": 72.4,
+  "error_critico": 14.5,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 76.5,
+    "early-pink": 9.8,
+    "overripe": 0.0,
+    "otra_comercial": 13.7,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 70.3,
+    "early-pink": 1.0,
+    "overripe": 15.8,
+    "otra_comercial": 12.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    593,
+    23,
+    5,
+    0,
+    6,
+    9516
+   ],
+   [
+    147,
+    17,
+    7,
+    14,
+    13,
+    2132
+   ],
+   [
+    29,
+    24,
+    11,
+    27,
+    12,
+    512
+   ],
+   [
+    17,
+    10,
+    15,
+    27,
+    58,
+    712
+   ],
+   [
+    3,
+    9,
+    13,
+    33,
+    87,
+    797
+   ],
+   [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolo26n": {
+  "imgsz": 640,
+  "map50": 87.47,
+  "map50_95": 74.44,
+  "precision": 83.92,
+  "recall": 84.54,
+  "especificidad": 80.71,
+  "especificidad_clase": {
+   "unripe": 35.27,
+   "early-pink": 87.29,
+   "commercial-basic": 94.33,
+   "commercial-high": 93.24,
+   "overripe": 93.41
+  },
+  "acierto_comercial": 77.0,
+  "error_critico": 7.9,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 84.3,
+    "early-pink": 3.9,
+    "overripe": 0.0,
+    "otra_comercial": 11.8,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 73.3,
+    "early-pink": 0.0,
+    "overripe": 9.9,
+    "otra_comercial": 16.8,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    592,
+    24,
+    10,
+    9,
+    14,
+    3384
+   ],
+   [
+    189,
+    22,
+    8,
+    6,
+    2,
+    560
+   ],
+   [
+    1,
+    27,
+    14,
+    24,
+    18,
+    273
+   ],
+   [
+    5,
+    5,
+    14,
+    41,
+    56,
+    326
+   ],
+   [
+    1,
+    3,
+    5,
+    21,
+    86,
+    361
+   ],
+   [
+    1,
+    3,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolo11n-hsv-1024": {
+  "imgsz": 1024,
+  "map50": 86.56,
+  "map50_95": 74.02,
+  "precision": 81.96,
+  "recall": 83.47,
+  "especificidad": 82.79,
+  "especificidad_clase": {
+   "unripe": 55.6,
+   "early-pink": 88.05,
+   "commercial-basic": 91.01,
+   "commercial-high": 89.36,
+   "overripe": 89.93
+  },
+  "acierto_comercial": 79.0,
+  "error_critico": 6.6,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 74.5,
+    "early-pink": 3.9,
+    "overripe": 0.0,
+    "otra_comercial": 21.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 81.2,
+    "early-pink": 1.0,
+    "overripe": 6.9,
+    "otra_comercial": 10.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    716,
+    17,
+    2,
+    1,
+    6,
+    1192
+   ],
+   [
+    49,
+    31,
+    13,
+    5,
+    5,
+    340
+   ],
+   [
+    4,
+    20,
+    14,
+    29,
+    16,
+    244
+   ],
+   [
+    4,
+    8,
+    19,
+    35,
+    62,
+    272
+   ],
+   [
+    16,
+    5,
+    3,
+    31,
+    87,
+    283
+   ],
+   [
+    0,
+    3,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolov8x": {
+  "imgsz": 640,
+  "map50": 88.59,
+  "map50_95": 75.38,
+  "precision": 78.2,
+  "recall": 86.32,
+  "especificidad": 81.31,
+  "especificidad_clase": {
+   "unripe": 33.43,
+   "early-pink": 92.15,
+   "commercial-basic": 94.56,
+   "commercial-high": 92.88,
+   "overripe": 93.54
+  },
+  "acierto_comercial": 67.1,
+  "error_critico": 13.8,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 60.8,
+    "early-pink": 7.8,
+    "overripe": 0.0,
+    "otra_comercial": 31.4,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 70.3,
+    "early-pink": 1.0,
+    "overripe": 15.8,
+    "otra_comercial": 12.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    716,
+    23,
+    1,
+    4,
+    6,
+    2854
+   ],
+   [
+    71,
+    24,
+    9,
+    11,
+    0,
+    305
+   ],
+   [
+    1,
+    25,
+    12,
+    22,
+    7,
+    221
+   ],
+   [
+    0,
+    7,
+    20,
+    43,
+    72,
+    259
+   ],
+   [
+    1,
+    2,
+    9,
+    21,
+    91,
+    287
+   ],
+   [
+    0,
+    3,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolo11x": {
+  "imgsz": 640,
+  "map50": 89.09,
+  "map50_95": 75.84,
+  "precision": 84.51,
+  "recall": 84.54,
+  "especificidad": 81.68,
+  "especificidad_clase": {
+   "unripe": 38.16,
+   "early-pink": 92.5,
+   "commercial-basic": 93.47,
+   "commercial-high": 92.06,
+   "overripe": 92.22
+  },
+  "acierto_comercial": 77.0,
+  "error_critico": 10.5,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 74.5,
+    "early-pink": 3.9,
+    "overripe": 0.0,
+    "otra_comercial": 21.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 78.2,
+    "early-pink": 0.0,
+    "overripe": 13.9,
+    "otra_comercial": 7.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    742,
+    24,
+    1,
+    3,
+    2,
+    2287
+   ],
+   [
+    40,
+    26,
+    13,
+    15,
+    2,
+    264
+   ],
+   [
+    2,
+    20,
+    12,
+    30,
+    11,
+    230
+   ],
+   [
+    1,
+    5,
+    16,
+    25,
+    69,
+    261
+   ],
+   [
+    3,
+    6,
+    9,
+    28,
+    91,
+    293
+   ],
+   [
+    1,
+    3,
+    0,
+    0,
+    1,
+    0
+   ]
+  ]
+ },
+ "yolov9e": {
+  "imgsz": 640,
+  "map50": 89.09,
+  "map50_95": 75.28,
+  "precision": 82.3,
+  "recall": 87.51,
+  "especificidad": 81.49,
+  "especificidad_clase": {
+   "unripe": 43.08,
+   "early-pink": 91.66,
+   "commercial-basic": 93.67,
+   "commercial-high": 90.86,
+   "overripe": 88.17
+  },
+  "acierto_comercial": 77.0,
+  "error_critico": 10.5,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 72.5,
+    "early-pink": 7.8,
+    "overripe": 0.0,
+    "otra_comercial": 19.6,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 79.2,
+    "early-pink": 2.0,
+    "overripe": 9.9,
+    "otra_comercial": 8.9,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    720,
+    17,
+    2,
+    3,
+    10,
+    2515
+   ],
+   [
+    59,
+    27,
+    15,
+    13,
+    5,
+    340
+   ],
+   [
+    1,
+    25,
+    20,
+    29,
+    11,
+    264
+   ],
+   [
+    1,
+    7,
+    8,
+    30,
+    71,
+    385
+   ],
+   [
+    5,
+    6,
+    6,
+    26,
+    79,
+    559
+   ],
+   [
+    3,
+    2,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ },
+ "yolo26x": {
+  "imgsz": 640,
+  "map50": 88.87,
+  "map50_95": 76.03,
+  "precision": 82.41,
+  "recall": 85.64,
+  "especificidad": 83.06,
+  "especificidad_clase": {
+   "unripe": 62.11,
+   "early-pink": 88.15,
+   "commercial-basic": 91.14,
+   "commercial-high": 87.34,
+   "overripe": 86.57
+  },
+  "acierto_comercial": 73.0,
+  "error_critico": 12.5,
+  "confusion_comercial": {
+   "commercial-basic": {
+    "cajas": 51,
+    "bien": 76.5,
+    "early-pink": 11.8,
+    "overripe": 0.0,
+    "otra_comercial": 11.8,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   },
+   "commercial-high": {
+    "cajas": 101,
+    "bien": 71.3,
+    "early-pink": 0.0,
+    "overripe": 12.9,
+    "otra_comercial": 15.8,
+    "unripe": 0.0,
+    "no_detectada": 0.0
+   }
+  },
+  "matriz_conteos": [
+   [
+    697,
+    28,
+    3,
+    0,
+    2,
+    928
+   ],
+   [
+    84,
+    32,
+    15,
+    12,
+    3,
+    270
+   ],
+   [
+    1,
+    17,
+    13,
+    21,
+    13,
+    238
+   ],
+   [
+    2,
+    0,
+    12,
+    32,
+    77,
+    317
+   ],
+   [
+    4,
+    4,
+    8,
+    36,
+    80,
+    371
+   ],
+   [
+    1,
+    3,
+    0,
+    0,
+    1,
+    0
+   ]
+  ]
+ }
+}
