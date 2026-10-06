@@ -685,7 +685,9 @@ def main():
         f"{time.strftime('%H:%M', time.localtime(fin))}")
 
     respaldo = Respaldo(sal, nombre, not a.sin_github, a.secreto, huella)
-    n = sum(len(v) for v in listas.values())
+    n = len(listas["test"]) + sum(len(v) for v in listas["folds"].values()) if a.cv else sum(len(v) for v in listas.values())
+    if a.cv:
+        log("Folds (fotos): " + ", ".join(f"f{k} {len(v)}" for k, v in listas["folds"].items()) + f" · test fijo {len(listas['test'])}")
     info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "gpus": gpus, "reparto": reparto, "cls_pw": a.cls_pw}
     escribir(sal / "config.json", info | {"modelos": a.modelos, "epochs": a.epochs, "horas": a.horas, "partes": a.partes,
                                           "huella_particion": huella, "inicio": time.strftime("%Y-%m-%d %H:%M")})
