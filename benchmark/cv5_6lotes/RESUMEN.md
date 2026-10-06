@@ -1,6 +1,6 @@
 # Benchmark YOLO · cv5_6lotes
 
-Actualizado 06/10/2026 20:50 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 06/10/2026 20:52 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -22,10 +22,11 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | 4 | yolov9t-1024-f3 | 73.7 % | 13.1 % | 0.745 | 0.867 | 0.84 | 0.84 | 0.7484 | 64 (mejor 44) | 74.0 | 2.01 | 7.9 | 9.84 |
 | 5 | yolo11n-1024-f3 | 72.4 % | 12.5 % | 0.766 | 0.896 | 0.82 | 0.88 | 0.7481 | 52 (mejor 32) | 44.2 | 2.59 | 6.5 | 8.25 |
 | 6 | yolo26n-f3 | 72.4 % | 13.8 % | 0.763 | 0.893 | 0.80 | 0.87 | 0.7439 | 34 (mejor 14) | 14.8 | 2.51 | 5.9 | 5.18 |
-| 7 | yolo11n-1024-f2 | 69.7 % | 15.8 % | 0.725 | 0.861 | 0.79 | 0.85 | 0.7456 | 42 (mejor 22) | 35.6 | 2.59 | 6.5 | 7.53 |
-| 8 | yolo11n-1024-f1 | 69.0 % | 17.1 % | 0.746 | 0.869 | 0.77 | 0.86 | 0.7461 | 50 (mejor 30) | 41.2 | 2.59 | 6.5 | 7.48 |
-| 9 | yolo26n-f4 | 66.5 % | 17.1 % | 0.748 | 0.874 | 0.77 | 0.86 | 0.7316 | 43 (mejor 23) | 17.5 | 2.51 | 5.9 | 4.64 |
-| 10 | yolo26n-f1 | 61.8 % | 23.0 % | 0.724 | 0.855 | 0.78 | 0.85 | 0.7498 | 40 (mejor 20) | 17.0 | 2.51 | 5.9 | 4.2 |
+| 7 | yolov9t-1024-f4 | 71.8 % | 13.8 % | 0.766 | 0.891 | 0.84 | 0.83 | 0.7601 | 56 (mejor 36) | 64.5 | 2.01 | 7.9 | 9.91 |
+| 8 | yolo11n-1024-f2 | 69.7 % | 15.8 % | 0.725 | 0.861 | 0.79 | 0.85 | 0.7456 | 42 (mejor 22) | 35.6 | 2.59 | 6.5 | 7.53 |
+| 9 | yolo11n-1024-f1 | 69.0 % | 17.1 % | 0.746 | 0.869 | 0.77 | 0.86 | 0.7461 | 50 (mejor 30) | 41.2 | 2.59 | 6.5 | 7.48 |
+| 10 | yolo26n-f4 | 66.5 % | 17.1 % | 0.748 | 0.874 | 0.77 | 0.86 | 0.7316 | 43 (mejor 23) | 17.5 | 2.51 | 5.9 | 4.64 |
+| 11 | yolo26n-f1 | 61.8 % | 23.0 % | 0.724 | 0.855 | 0.78 | 0.85 | 0.7498 | 40 (mejor 20) | 17.0 | 2.51 | 5.9 | 4.2 |
 
 **AP50 por clase (test)**
 
@@ -37,6 +38,7 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolov9t-1024-f3 | 0.99 | 0.87 | 0.71 | 0.80 | 0.96 |
 | yolo11n-1024-f3 | 0.99 | 0.91 | 0.81 | 0.82 | 0.96 |
 | yolo26n-f3 | 0.98 | 0.89 | 0.79 | 0.85 | 0.96 |
+| yolov9t-1024-f4 | 0.99 | 0.90 | 0.78 | 0.82 | 0.96 |
 | yolo11n-1024-f2 | 0.99 | 0.88 | 0.67 | 0.81 | 0.95 |
 | yolo11n-1024-f1 | 0.99 | 0.89 | 0.71 | 0.80 | 0.95 |
 | yolo26n-f4 | 0.99 | 0.90 | 0.73 | 0.80 | 0.95 |
@@ -58,6 +60,8 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolo11n-1024-f3 | commercial-high | 101 | 68.3 | **0.0** | **17.8** | 13.9 | 0.0 | 0.0 |
 | yolo26n-f3 | commercial-basic | 51 | 74.5 | **5.9** | **0.0** | 19.6 | 0.0 | 0.0 |
 | yolo26n-f3 | commercial-high | 101 | 71.3 | **0.0** | **17.8** | 10.9 | 0.0 | 0.0 |
+| yolov9t-1024-f4 | commercial-basic | 51 | 66.7 | **13.7** | **0.0** | 19.6 | 0.0 | 0.0 |
+| yolov9t-1024-f4 | commercial-high | 101 | 74.3 | **0.0** | **13.9** | 11.9 | 0.0 | 0.0 |
 | yolo11n-1024-f2 | commercial-basic | 51 | 58.8 | **17.6** | **0.0** | 23.5 | 0.0 | 0.0 |
 | yolo11n-1024-f2 | commercial-high | 101 | 75.2 | **1.0** | **13.9** | 9.9 | 0.0 | 0.0 |
 | yolo11n-1024-f1 | commercial-basic | 51 | 72.5 | **13.7** | **0.0** | 13.7 | 0.0 | 0.0 |
@@ -71,15 +75,14 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 
 | Modelo | Folds | mAP@0.5 | mAP@0.5:0.95 | Precisión | Recall | Especif. | Acierto com. | Error crít. | mAP@0.5 (val del fold) |
 |---|---|---|---|---|---|---|---|---|---|
-| yolov9t-1024 | 3 | 88.0 ± 1.2 | 75.4 ± 0.8 | 84.2 ± 0.2 | 83.1 ± 0.6 | 94.8 ± 0.5 | 75.9 ± 2.3 | 11.4 ± 1.6 | 88.2 ± 0.4 |
+| yolov9t-1024 | 4 | 88.3 ± 1.1 | 75.7 ± 0.9 | 84.2 ± 0.2 | 83.2 ± 0.5 | 94.7 ± 0.4 | 74.8 ± 2.8 | 12.0 ± 1.8 | 88.3 ± 0.4 |
 | yolo11n-1024 | 3 | 87.5 ± 1.8 | 74.6 ± 2.0 | 79.2 ± 2.2 | 86.1 ± 1.6 | 94.6 ± 0.4 | 70.4 ± 1.8 | 15.1 ± 2.4 | 87.7 ± 0.5 |
 | yolo26n | 4 | 87.6 ± 1.6 | 74.6 ± 1.6 | 79.8 ± 2.8 | 85.7 ± 0.6 | 94.9 ± 0.4 | 68.6 ± 5.5 | 16.1 ± 5.3 | 87.2 ± 1.1 |
 
 **Sin resultado todavía**
 
-- yolov9t-1024-f4: entrenando
 - yolo11n-1024-f4: entrenando
-- yolov9t-1024-f5: pendiente
+- yolov9t-1024-f5: entrenando
 - yolo26n-f5: pendiente
 - yolo11n-1024-f5: pendiente
 
