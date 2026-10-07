@@ -1,6 +1,6 @@
 # Benchmark YOLO · cv5_6lotes
 
-Actualizado 07/10/2026 00:51 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 07/10/2026 01:01 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
