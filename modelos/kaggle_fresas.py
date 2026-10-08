@@ -121,13 +121,14 @@ def armar_dataset(rev, destino, n_val=40):
     return n
 
 
-def sugerir(modelo, lote, imgsz=640):
+def sugerir(modelo, lote, imgsz=640, desde=1):
+    """Escribe sugerencias en las fotos del lote a partir de la n.º «desde» (1 = todas); las anteriores no se tocan."""
     from ultralytics import YOLO
     m = YOLO(modelo)
     t, i, j = datos(lote)
     D = json.loads(t[i:j])
     ns = nf = 0
-    for d in D:
+    for d in D[desde - 1:]:
         r = m.predict(str(REPO / "revision" / lote / d["img"]), imgsz=imgsz, conf=0.05, iou=0.5, verbose=False)[0]
         W, H = r.orig_shape[1], r.orig_shape[0]
         preds = [([b[0]/W, b[1]/H, b[2]/W, b[3]/H], ORD[int(c)], float(p))
