@@ -1,7 +1,7 @@
 modelo,tamaño,imgsz,hsv_h,estado,acierto_comercial,error_critico,map50,map50_95,precision,recall,val_map50,val_map50_95,epochs_hechas,mejor_epoch,parado_por_tiempo,minutos,batch,params_M,gflops,inferencia_ms,peso_MB,gpu,error
 yolo26n-1024-f1,,,,entrenando,,,,,,,,,,,,,,,,,,,
-yolo26n-1024-f2,,,,entrenando,,,,,,,,,,,,,,,,,,,
-yolo26n-1024-f3,,,,pendiente,,,,,,,,,,,,,,,,,,,
+yolo26n-1024-f2,nano,1024,0.0,completo,68.4,18.4,0.8783,0.7561,0.8036,0.8454,0.8654,0.7517,49,29,False,61.9,8,2.51,5.9,8.98,5.4,Tesla T4,
+yolo26n-1024-f3,,,,entrenando,,,,,,,,,,,,,,,,,,,
 yolo26n-1024-f4,,,,pendiente,,,,,,,,,,,,,,,,,,,
 yolo26n-1024-f5,,,,pendiente,,,,,,,,,,,,,,,,,,,
 yolo11n-1024-f1,nano,1024,0.0,completo,69.0,17.1,0.8691,0.7461,0.7742,0.8558,0.8724,0.7461,50,30,False,41.2,8,2.59,6.5,7.48,5.5,Tesla T4,
