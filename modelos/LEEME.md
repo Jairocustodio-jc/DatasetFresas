@@ -33,3 +33,9 @@ lotes revisados, en las mismas condiciones. Está pensado para dejarlo corriendo
 Run All»: reparte las horas entre los modelos, usa las 2 GPU si hay, se reinicia si un proceso muere y continúa si se vuelve
 a correr. Va subiendo los resultados a la rama `yolo-benchmark` y los pesos a un release `benchmark-<nombre>`. Las instrucciones
 están en el docstring del script.
+
+## Sugerencias de los lotes 7 a 11 (YOLOv9t a 1024 px)
+`yolo_fresas_v9t_1024.pt`: YOLOv9t a 1024 px del benchmark (entrenado con la partición 70/15/15 de los lotes 1–6). En la
+validación cruzada de 5 folds quedó empatado en primer lugar con YOLO12n-1024 (75,7 ± 3,0 % de acierto comercial).
+Con él se regeneraron las sugerencias de los lotes 7–11 (`sugerir(..., imgsz=1024)`, mismas reglas de umbral).
+El lote 6 no se tocó porque estaba en revisión.
