@@ -139,8 +139,8 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 
 **Sin resultado todavía**
 
-- yolo26n-1024-f1: pendiente
-- yolo26n-1024-f2: pendiente
+- yolo26n-1024-f1: entrenando
+- yolo26n-1024-f2: entrenando
 - yolo26n-1024-f3: pendiente
 - yolo26n-1024-f4: pendiente
 - yolo26n-1024-f5: pendiente
