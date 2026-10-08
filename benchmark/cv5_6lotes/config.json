@@ -71,16 +71,11 @@
  },
  "cls_pw": 0.5,
  "modelos": [
-  "yolov10n-1024-f1",
-  "yolo12n-1024-f1",
-  "yolov10n-1024-f2",
-  "yolo12n-1024-f2",
-  "yolov10n-1024-f3",
-  "yolo12n-1024-f3",
-  "yolov10n-1024-f4",
-  "yolo12n-1024-f4",
-  "yolov10n-1024-f5",
-  "yolo12n-1024-f5"
+  "yolo26n-1024-f1",
+  "yolo26n-1024-f2",
+  "yolo26n-1024-f3",
+  "yolo26n-1024-f4",
+  "yolo26n-1024-f5"
  ],
  "epochs": 100,
  "horas": 11.0,
@@ -90,5 +85,5 @@
   0.15
  ],
  "huella_particion": "42a74935bb54",
- "inicio": "2026-10-06 23:05"
+ "inicio": "2026-10-08 03:34"
 }

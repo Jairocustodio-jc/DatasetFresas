@@ -1,6 +1,6 @@
 # Benchmark YOLO · cv5_6lotes
 
-Actualizado 07/10/2026 04:39 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 08/10/2026 03:35 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06. 1564 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -136,5 +136,13 @@ En train, las fotos con cajas comerciales van repetidas (564 copias extra) y la 
 | yolo11n-1024 | 5 | 87.9 ± 1.5 | 75.1 ± 1.7 | 80.1 ± 2.2 | 85.6 ± 1.3 | 94.5 ± 0.4 | 72.7 ± 3.5 | 13.4 ± 2.9 | 88.0 ± 0.5 |
 | yolov10n-1024 | 5 | 86.5 ± 1.1 | 73.7 ± 1.3 | 80.8 ± 2.6 | 84.7 ± 1.9 | 94.2 ± 0.7 | 71.3 ± 3.9 | 13.8 ± 4.7 | 87.9 ± 0.7 |
 | yolo26n | 5 | 87.5 ± 1.4 | 74.7 ± 1.4 | 79.7 ± 2.5 | 85.5 ± 0.7 | 94.9 ± 0.4 | 68.8 ± 4.8 | 15.5 ± 4.8 | 87.1 ± 0.9 |
+
+**Sin resultado todavía**
+
+- yolo26n-1024-f1: pendiente
+- yolo26n-1024-f2: pendiente
+- yolo26n-1024-f3: pendiente
+- yolo26n-1024-f4: pendiente
+- yolo26n-1024-f5: pendiente
 
 ⏱ = se detuvo por el tope de tiempo; se guarda su mejor época. Pesos: release `benchmark-cv5_6lotes` del repo. Mismas condiciones para todos: ver modelos/kaggle_benchmark.py.
