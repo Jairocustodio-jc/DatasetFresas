@@ -1,9 +1,11 @@
 {
  "formato": 2,
  "lote": "lote_09",
- "fecha": "2026-10-09T12:44:40.877Z",
+ "fecha": "2026-10-09T12:44:48.148Z",
  "marcas": {
-  "37.png": "bien"
+  "37.png": "bien",
+  "370.png": "bien",
+  "371.png": "bien"
  },
  "correcciones": {
   "370.png": [
@@ -551,13 +553,18 @@
  },
  "tiempos": {
   "37.png": 1791489586131,
-  "370.png": 1791549878937
+  "370.png": 1791549882724,
+  "371.png": 1791549884391
  },
- "rechazadas": {},
+ "rechazadas": {
+  "370.png": [
+   1
+  ]
+ },
  "descartadas": {},
  "resumen": {
-  "fotos": 1,
-  "bien": 1,
+  "fotos": 3,
+  "bien": 3,
   "mal": 0,
   "evaluar": 0,
   "cajas": 1
