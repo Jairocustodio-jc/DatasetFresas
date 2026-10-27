@@ -22,6 +22,45 @@ revisa el registro de abajo antes de afirmar algo.
    p_Holm < 0,05 y en la mayoría de los folds; si ninguna lo hace, se mantiene la receta base. El test fijo se reporta de
    referencia y no participa en la elección. Hasta hoy no se ha hecho: la receta actual se fijó a mano.
 
+## Metas del sistema y su justificación (borrador para el asesor, 27/10/2026)
+El acierto del sistema se descompone en dos factores que se justifican y se miden por separado:
+
+**acierto del sistema = recall en campo (fresas que el robot llega a ver y detectar) × acierto sobre las fresas visibles.**
+
+1. **Acierto sobre las fresas visibles: se justifica con las normas de calidad.** Las normas de comercialización fijan
+   cuánto error tolera un lote, y eso se traduce en una precisión mínima sobre lo que el robot cosecha:
+   - UNECE FFV-35 (fresas; adoptada por la UE en el Reglamento 543/2011, anexo I parte B.7): Categoría «Extra» tolera
+     **5 %** por número o peso de fresas que no cumplen la categoría; Categorías I y II, **10 %**, con no más de 2 % que no
+     cumpla los requisitos mínimos o con pudrición. Tamaño mínimo 25 mm (Extra) y 18 mm (I y II).
+   - USDA U.S. No. 1 (7 CFR 51.3115 y ss.): **10 %** por conteo de fresas que no cumplen el grado, con sublímites para
+     daño serio y 2 % para pudrición.
+   - Perú: **NTP 011.011:2019 «Fresas. Requisitos»** (INACAL; reemplaza a la NTP 011.011:1975). Categorías Extra, Primera
+     y Segunda. Tolerancias de calidad: **pendiente de consultar el texto en INACAL** (no está disponible en línea); un
+     artículo que la cita reproduce diámetros mínimos de 38 / 26 / 20 mm y 10 % de tolerancia de tamaño.
+   Meta derivada: un lote cosechado debe cumplir Categoría I, es decir, **≥ 90 % de las fresas cosechadas realmente
+   comerciales** (≥ 95 % para Extra). La confusión commercial-basic ↔ commercial-high no saca al lote de categoría; el
+   **error crítico** (early-pink u overripe cosechada) sí. Por eso el error crítico es la métrica principal: hoy ≈ 10 %
+   en el test, justo en el límite de Categoría I y lejos del 5 % de Extra.
+   Argumento biológico adicional: la fresa es un fruto no climatérico, no madura después de cosechada (Perkins-Veazie,
+   *Horticultural Reviews* 17, 1995; manuales de poscosecha de Kader, UC Davis). Una early-pink cosechada es fruta perdida;
+   una overripe, merma por vida útil.
+2. **Recall en campo: no se puede justificar con literatura; se fija como requisito y se mide en Huaral.** Lo publicado
+   para robots de fresa en campo está por debajo o alrededor del 90 % y varía mucho con la oclusión: Xiong et al. 2020
+   (J. Field Robotics) 50–97 % de éxito al primer intento según condiciones; Parsa et al. 2024 (J. Field Robotics) 87 % de
+   las detectadas cosechadas; He et al. 2025 (Comput. Electron. Agric.) 58 % → 74 % de cosecha al apartar hojas con
+   ventilador, detección correcta ≈ 80 %, visible/oculta clasificada ≈ 93 %; detectores en campo con recall 81–90 %
+   (RTF-YOLO 2024, DHN-YOLO 2025, graduación en invernadero *Agriculture* 2026: 1964 de 2175 instancias detectadas).
+   Un 90 % es alcanzable solo con varios pases o varios ángulos por planta; hay que medirlo contando las fresas que una
+   persona ve en la planta contra las que el robot detecta en su trayectoria.
+3. **Techo humano (pendiente, aporte propio):** doble etiquetado ciego de ~300 fresas comerciales y kappa ponderado
+   cuadrático. No hay kappa publicado para fresa; si dos personas coinciden en el 90 %, pedirle 94 % al modelo no tiene
+   sentido y la meta se recalibra.
+4. **Costo por tipo de error:** tabla con la consecuencia de cada confusión (fruta perdida, merma, retraso al siguiente
+   pase) y, con precios locales, una función de costo que justifique el peso del error crítico frente a basic ↔ high.
+
+Todas las cifras de normas y robots se verificaron solo en extractos y textos derivados (UE, ASEAN, Tanzania para
+FFV-35); antes de citarlas en la tesis hay que leer el texto original de cada norma y artículo.
+
 ## Orden de trabajo cuando se termine de etiquetar (lotes 1–11)
 1. `--cv 5 --nueva-particion` con los finalistas (YOLO12n, YOLOv9t y YOLO26n a 1024 px; v10n y 11n si hay tiempo):
    partición y test fijo nuevos con todas las fotos; esta es la comparación que va a la tesis. Ningún resultado de la
