@@ -36,6 +36,21 @@ Cómo cuida el tiempo y los resultados:
   - si una GPU falla o un proceso muere, se reinicia y sigue con el resto; si un modelo falla, se anota el error y sigue;
   - si se corta todo, volver a correrlo continúa: salta los modelos ya completos que estén en GitHub.
 El token nunca se escribe en disco ni se imprime.
+
+Validación cruzada (--cv K): test fijo + K folds estratificados sobre train+val; cada modelo se entrena K veces y se
+reporta media ± desviación en el test fijo (benchmark/cv<K>_<origen>/). Por defecto reusa la partición de --particion-de
+(6lotes); con --nueva-particion arma una partición nueva con TODAS las fotos revisadas (test fijo nuevo) y la corrida se
+llama cv<K>_<N>lotes: es lo que toca cuando se termine de etiquetar. Si no cabe en 12 h, volver a correr el mismo comando
+en otra sesión sigue desde donde quedó (mismos folds: la huella de la partición lo garantiza).
+
+    !python modelos/kaggle_benchmark.py --cv 5 --nueva-particion --modelos yolo12n-1024 yolov9t-1024 yolo26n-1024
+
+Validación de hiperparámetros (--hiper): para el o los finalistas, entrena cada variante de HIPER (una cosa a la vez
+respecto de «base») en los mismos folds, y las compara contra base por el acierto comercial en la VALIDACIÓN de cada fold
+(t pareada + Holm). El test fijo nunca elige: se reporta solo de referencia. --folds 1 2 3 hace una primera pasada más
+corta; después se completa con los folds que falten (mismo comando sin --folds).
+
+    !python modelos/kaggle_benchmark.py --hiper --particion-de 11lotes --modelos yolo12n-1024 --folds 1 2 3
 """
 import argparse
 import csv
@@ -56,6 +71,22 @@ GRANDE = ["yolov9e", "yolo12x", "yolov8x", "yolov10x", "yolo11x", "yolo26x"]   #
 EXPER = ["yolo11n-hsv", "yolo11n-1024", "yolo11n-hsv-1024"]
 # Cualquier modelo admite los sufijos «-hsv» (aumento de tono) y «-1024» (1024 px), p. ej. yolo26n-hsv-1024.
 
+# Validación de hiperparámetros (--hiper): variantes de la receta, UNA cosa a la vez respecto de «base» (la receta del
+# benchmark y de la validación cruzada: AdamW lr0 0,001, cls_pw 0,5, sobremuestreo ×2, hsv_h 0, mosaico). Se entrenan
+# en los mismos folds que la validación cruzada y se eligen por el acierto comercial en la VALIDACIÓN de cada fold; el test
+# fijo se reporta solo de referencia y nunca decide. Entrada de la cola: «<modelo>_<variante>-f<K>», p. ej. yolo12n-1024_tono-f3.
+HIPER = {
+    "base":       {},
+    "lrbajo":     {"lr0": 0.0005},
+    "lralto":     {"lr0": 0.002},
+    "sinpeso":    {"cls_pw": 0.0},          # sin ponderar las clases escasas en la pérdida
+    "pesofull":   {"cls_pw": 1.0},          # inverso de la frecuencia completo
+    "sinsobre":   {"sobremuestreo": 1},     # sin repetir las fotos con cajas comerciales
+    "sobre3":     {"sobremuestreo": 3},
+    "tono":       {"hsv_h": 0.015},
+    "sinmosaico": {"mosaic": 0.0},          # el mosaico recorta fresas por la mitad; ¿ayuda o estorba en las comerciales?
+}
+
 
 def peso(m):
     """Costo relativo de entrenar m (para repartir el tiempo): grande ≈ 6 nano; 1024 px ≈ 2,5 veces 640 px."""
@@ -63,13 +94,21 @@ def peso(m):
 
 
 def valido(m):
+    m, *var = m.split("_")
     base, *suf = m.split("-")
-    return base in NANO + GRANDE and set(suf) <= {"hsv", "1024"}
+    return base in NANO + GRANDE and set(suf) <= {"hsv", "1024"} and all(v in HIPER for v in var) and len(var) <= 1
 
 
 def ajustes(m):
     """Peso base, tamaño de imagen y aumento de tono de cada entrada de la cola."""
+    m = m.split("_")[0]
     return m.split("-")[0], (1024 if "1024" in m else 640), (0.015 if "hsv" in m else 0.0)
+
+
+def variante(m):
+    """Variante de --hiper de una entrada de la cola («modelo_variante-fK») y sus ajustes; «base» si no lleva."""
+    v = m.split("_")[1].rsplit("-f", 1)[0] if "_" in m else "base"
+    return v, HIPER[v]
 REPO = Path(__file__).resolve().parent.parent
 ORD_ = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
 sys.path.insert(0, str(REPO / "modelos"))
@@ -253,7 +292,7 @@ def worker(a):
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu"
     a.dev = 0 if torch.cuda.is_available() else "cpu"
     log(f"[GPU {a.gpu}] {gpu}")
-    plantilla = a.data   # en validación cruzada lleva «{f}», que se reemplaza por el fold de cada trabajo
+    plantilla = a.data   # en validación cruzada lleva «{f}» y «{sm}»: el fold y el sobremuestreo de cada trabajo
     while True:
         hechos = {p.stem[4:] for p in sal.glob("res_*.json")}
         pend = [m for m in a.modelos if m not in hechos]
@@ -274,7 +313,11 @@ def worker(a):
             continue
         carga = sum(peso(x) for x in pend) / n_gpu
         tope = min(resta, resta * peso(m) / max(carga, peso(m)))
-        a.data = plantilla.replace("{f}", m.rsplit("-f", 1)[1]) if "-f" in m else plantilla
+        if "-f" in m:
+            sm = variante(m)[1].get("sobremuestreo", a.sobremuestreo)
+            a.data = plantilla.replace("{f}", m.rsplit("-f", 1)[1]).replace("{sm}", str(sm))
+        else:
+            a.data = plantilla
         entrenar(m, a, sal, tope, fin, gpu, YOLO)
         torch.cuda.empty_cache()
 
@@ -282,9 +325,12 @@ def worker(a):
 def entrenar(m, a, sal, tope, fin, gpu, YOLO):
     grande = m.split("-")[0] in GRANDE
     base, imgsz, hsv_h = ajustes(m)
+    var, cfg = variante(m)   # ajustes de la variante de --hiper («base» = la receta de siempre)
+    lr0, cls_pw, hsv_h = cfg.get("lr0", 0.001), cfg.get("cls_pw", a.cls_pw), cfg.get("hsv_h", hsv_h)
+    extra = {k: v for k, v in cfg.items() if k not in ("lr0", "cls_pw", "hsv_h", "sobremuestreo")}
     batch = 8 if grande or imgsz > 640 else 16
     t0 = time.time()
-    log(f"[GPU {a.gpu}] {m}: empieza (tope {tope/3600:.1f} h, batch {batch})")
+    log(f"[GPU {a.gpu}] {m}: empieza (tope {tope/3600:.1f} h, batch {batch}" + (f", variante {var} {cfg}" if cfg else "") + ")")
     parado = {"tiempo": False}
 
     def por_tiempo(tr):
@@ -293,15 +339,16 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             tr.stop = True
 
     res = {"modelo": m, "tamaño": "grande" if grande else "nano", "gpu": gpu, "epochs_max": a.epochs,
-           "imgsz": imgsz, "hsv_h": hsv_h}
+           "imgsz": imgsz, "hsv_h": hsv_h, "lr0": lr0, "cls_pw": cls_pw,
+           "sobremuestreo": cfg.get("sobremuestreo", a.sobremuestreo), "variante": var, "hiper": cfg}
     for intento in range(3):
         try:
             modelo = YOLO(f"{base}.pt")
             modelo.add_callback("on_fit_epoch_end", por_tiempo)
             modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=imgsz, batch=batch, device=a.dev,
-                         optimizer="AdamW", lr0=0.001, nbs=64, seed=0, deterministic=True, workers=a.workers,
+                         optimizer="AdamW", lr0=lr0, nbs=64, seed=0, deterministic=True, workers=a.workers,
                          cache="ram" if not grande and imgsz <= 640 else False, project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
-                         fliplr=0.5, hsv_h=hsv_h, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=a.cls_pw)
+                         fliplr=0.5, hsv_h=hsv_h, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=cls_pw, **extra)
             break
         except Exception as e:
             oom = "out of memory" in str(e).lower()
@@ -336,6 +383,9 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
                 cm = confusion_comercial(v.confusion_matrix.matrix, v.names)   # referencia (matriz de Ultralytics)
                 res |= {"acierto_comercial_cm": cm.get("acierto_comercial"), "error_critico_cm": cm.get("error_critico")}
                 res |= comercial_top1(mb, Path(a.data).parent, imgsz, a.dev)       # la métrica principal
+            else:   # lo mismo en validación: es lo que decide en --hiper (el test nunca elige hiperparámetros)
+                cv_ = comercial_top1(mb, Path(a.data).parent, imgsz, a.dev, split="val")
+                res |= {"val_acierto_comercial": cv_.get("acierto_comercial"), "val_error_critico": cv_.get("error_critico")}
         res["inferencia_ms"] = round(float(v.speed.get("inference", 0)), 2)
         from kaggle_metricas import matriz   # matriz propia con criterio fijo (conf 0,25, IoU 0,45)
         M = matriz(mb, Path(a.data).parent, imgsz, a.dev).astype(float)
@@ -382,18 +432,18 @@ def confusion_comercial(mat, names):
             "acierto_comercial": round(sum(out[c]["bien"] * out[c]["cajas"] for c in out) / tot, 1) if tot else None}
 
 
-def comercial_top1(mb, ds, imgsz, dev):
-    """Por cada caja real comercial del test, la predicción MÁS SEGURA que la cubre (IoU ≥ 0,5, cualquier clase,
+def comercial_top1(mb, ds, imgsz, dev, split="test"):
+    """Por cada caja real comercial del split, la predicción MÁS SEGURA que la cubre (IoU ≥ 0,5, cualquier clase,
     confianza ≥ 0,25): es lo que haría el equipo en el campo. La matriz de Ultralytics, en cambio, empareja por IoU y
     puede quedarse con una segunda clase de baja confianza sobre la misma fresa, lo que subestima el acierto."""
     from kaggle_fresas import ORD, iou
     conf = {c: {} for c in COMERCIAL}
-    for p in sorted((ds / "images" / "test").iterdir()):
+    for p in sorted((ds / "images" / split).iterdir()):
         r = mb.predict(str(p), imgsz=imgsz, conf=0.25, device=dev, verbose=False)[0]
         W, H = r.orig_shape[1], r.orig_shape[0]
         pr = [([b[0]/W, b[1]/H, b[2]/W, b[3]/H], int(c), float(x)) for b, c, x in
               zip(r.boxes.xyxy.tolist(), r.boxes.cls.tolist(), r.boxes.conf.tolist())]
-        for l in (ds / "labels" / "test" / f"{p.stem}.txt").read_text().split("\n"):
+        for l in (ds / "labels" / split / f"{p.stem}.txt").read_text().split("\n"):
             if not l.strip():
                 continue
             c, x, y, w, h = map(float, l.split())
@@ -536,7 +586,8 @@ def resumen(sal, modelos, info):
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
         w.writerows(filas)
-    ok = sorted([r for r in filas if r.get("map50_95") is not None],
+    # las variantes de --hiper («modelo_variante-fK») van en su propia tabla, ordenada por validación, nunca por test
+    ok = sorted([r for r in filas if r.get("map50_95") is not None and "_" not in r["modelo"]],
                 key=lambda r: (-(r.get("acierto_comercial") or 0), r.get("error_critico") or 0, -r["map50_95"]))
     clases = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
     t = [f"# Benchmark YOLO · {info['nombre']}", "",
@@ -596,6 +647,13 @@ def resumen(sal, modelos, info):
             t.append(f"| {m} | {len(rs)} | {ms(rs, 'map50', 100)} | {ms(rs, 'map50_95', 100)} | {ms(rs, 'precision', 100)} | "
                      f"{ms(rs, 'recall', 100)} | {ms(rs, 'especificidad')} | {ms(rs, 'acierto_comercial')} | "
                      f"{ms(rs, 'error_critico')} | {ms(rs, 'val_map50', 100)} |")
+    hip = {}
+    for r in filas:
+        if "_" in r["modelo"] and r.get("val_acierto_comercial") is not None:
+            m, k = r["modelo"].rsplit("-f", 1)
+            hip.setdefault(m, {})[k] = r
+    if hip:
+        t += tabla_hiper(hip)
     otros = [r for r in filas if r.get("map50_95") is None]
     if otros:
         t += ["", "**Sin resultado todavía**", ""] + [f"- {r['modelo']}: {r.get('estado')}"
@@ -604,6 +662,104 @@ def resumen(sal, modelos, info):
           f"`benchmark-{info['nombre']}` del repo. Mismas condiciones para todos: ver modelos/kaggle_benchmark.py."]
     (sal / "RESUMEN.md").write_text("\n".join(t) + "\n", encoding="utf-8")
     return filas
+
+
+def beta_inc(a, b, x):
+    """Función beta incompleta regularizada I_x(a, b) (fracción continua, Numerical Recipes); evita depender de scipy."""
+    import math
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+
+    def cf(a, b, x):
+        tiny = 1e-300
+        qab, qap, qam = a + b, a + 1, a - 1
+        c, d = 1.0, 1 - qab * x / qap
+        d = 1 / (d if abs(d) > tiny else tiny)
+        h = d
+        for m in range(1, 300):
+            m2 = 2 * m
+            for aa in (m * (b - m) * x / ((qam + m2) * (a + m2)), -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))):
+                d = 1 + aa * d
+                d = 1 / (d if abs(d) > tiny else tiny)
+                c = 1 + aa / c
+                c = c if abs(c) > tiny else tiny
+                h *= d * c
+            if abs(d * c - 1) < 3e-14:
+                break
+        return h
+    bt = math.exp(math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b) + a * math.log(x) + b * math.log(1 - x))
+    return bt * cf(a, b, x) / a if x < (a + 1) / (a + b + 2) else 1 - bt * cf(b, a, 1 - x) / b
+
+
+def t_pareada(x, y):
+    """p de la prueba t pareada (dos colas) entre dos listas emparejadas por fold; None si n < 2."""
+    import statistics as st
+    d = [u - v for u, v in zip(x, y)]
+    if len(d) < 2:
+        return None
+    s = st.stdev(d)
+    if s == 0:
+        return 1.0 if st.mean(d) == 0 else 0.0
+    t, nu = st.mean(d) / (s / len(d) ** 0.5), len(d) - 1
+    return beta_inc(nu / 2, 0.5, nu / (nu + t * t))
+
+
+def holm(ps):
+    """Corrección de Holm: {nombre: p} → {nombre: p corregida}."""
+    orden = sorted((p, k) for k, p in ps.items() if p is not None)
+    out, acum = {}, 0.0
+    for i, (p, k) in enumerate(orden):
+        acum = max(acum, min(1.0, (len(orden) - i) * p))
+        out[k] = acum
+    return out
+
+
+def tabla_hiper(hip):
+    """Tabla de --hiper: por modelo, cada variante contra «base» en la VALIDACIÓN de los folds (t pareada + Holm)."""
+    import statistics as st
+    def ms(v):
+        return (f"{st.mean(v):.1f} ± {st.stdev(v):.1f}" if len(v) > 1 else f"{v[0]:.1f}") if v else "–"
+    t = ["", "**Validación de hiperparámetros** (una cosa a la vez respecto de «base»). Se ordena por el **acierto comercial "
+         "en la validación de cada fold**, que es lo que decide; «p» es la prueba t pareada por fold contra base y «p Holm» "
+         "la corregida por el número de variantes del modelo. El test fijo va al final **solo de referencia**: no se usa "
+         "para elegir.", "",
+         "| Modelo · variante | Ajustes | Folds | Acierto com. (val) | Error crít. (val) | mAP@0.5 (val) | Por fold (val) "
+         "| Δ vs base | p | p Holm | Acierto com. (test, ref.) | Error crít. (test, ref.) | Min/fold |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    por_modelo = {}
+    for m, rs in hip.items():
+        mod, var = m.split("_", 1)
+        por_modelo.setdefault(mod, {})[var] = rs
+    for mod, vars_ in por_modelo.items():
+        base = vars_.get("base", {})
+        ps, dif = {}, {}
+        for var, rs in vars_.items():
+            if var == "base" or not base:
+                continue
+            ks = sorted(set(rs) & set(base))
+            x = [rs[k]["val_acierto_comercial"] for k in ks]
+            y = [base[k]["val_acierto_comercial"] for k in ks]
+            if ks:
+                dif[var] = st.mean(x) - st.mean(y)
+                ps[var] = t_pareada(x, y)
+        ph = holm(ps)
+        orden = sorted(vars_, key=lambda v: -st.mean(r["val_acierto_comercial"] for r in vars_[v].values()))
+        for var in orden:
+            rs = vars_[var]
+            ks = sorted(rs, key=int)
+            val = [rs[k]["val_acierto_comercial"] for k in ks]
+            col = lambda k, f=1: ms([f * rs[x][k] for x in ks if rs[x].get(k) is not None])
+            fmt = lambda p: "–" if p is None else f"{p:.3f}"
+            t.append(f"| {mod} · **{var}** | {HIPER.get(var, {}) or 'receta base'} | {len(ks)} | **{ms(val)}** | "
+                     f"{col('val_error_critico')} | {col('val_map50', 100)} | {' · '.join(f'{v:.1f}' for v in val)} | "
+                     f"{'–' if var not in dif else f'{dif[var]:+.1f}'} | {fmt(ps.get(var))} | {fmt(ph.get(var))} | "
+                     f"{col('acierto_comercial')} | {col('error_critico')} | {col('minutos')} |")
+    t += ["", "Lectura: una variante solo se adopta si mejora a base en la validación con p Holm < 0,05 **y** en la mayoría de "
+          "los folds; si ninguna lo hace, se mantiene la receta base (la diferencia es menor que la variación entre folds). "
+          "La elegida se confirma después con la validación cruzada completa y el test, como cualquier otro modelo."]
+    return t
 
 
 # ───────────────────────────── proceso principal ─────────────────────────────
@@ -623,7 +779,14 @@ def main():
                     help="validación cruzada de K folds: test fijo de la corrida --particion-de y K folds sobre el resto")
     ap.add_argument("--particion-de", default="6lotes", help="corrida cuya partición (y test) se reusa en --cv")
     ap.add_argument("--nueva-particion", action="store_true",
-                    help="rehacer la partición con todas las fotos revisadas (por defecto reusa la de la corrida guardada)")
+                    help="rehacer la partición con todas las fotos revisadas (por defecto reusa la de la corrida guardada); "
+                         "con --cv hace también un test fijo nuevo y la corrida se llama cv<K>_<N>lotes")
+    ap.add_argument("--hiper", nargs="*", default=None, metavar="VARIANTE",
+                    help=f"validar hiperparámetros: entrena cada variante ({', '.join(HIPER)}; sin lista = todas) de los "
+                         "--modelos dados en los folds de --cv (5 si no se indica) y las compara contra «base» por la "
+                         "validación de cada fold; el test no decide")
+    ap.add_argument("--folds", type=int, nargs="+", default=None, metavar="K",
+                    help="correr solo estos folds (por defecto todos); p. ej. --folds 1 2 3 para una primera pasada de --hiper")
     ap.add_argument("--sobremuestreo", type=int, default=2,
                     help="veces que aparece en train cada foto con cajas comerciales (1 = sin repetir)")
     ap.add_argument("--cls-pw", type=float, default=0.5,
@@ -641,9 +804,19 @@ def main():
 
     inicio = time.time()
     fin = inicio + a.horas * 3600
+    if a.hiper is not None:
+        a.hiper = a.hiper or list(HIPER)
+        a.cv = a.cv or 5
+        if a.modelos == NANO + EXPER + GRANDE:
+            sys.exit("--hiper necesita --modelos con el o los finalistas (p. ej. --modelos yolo12n-1024)")
+        if [v for v in a.hiper if v not in HIPER]:
+            sys.exit(f"Variantes desconocidas: {[v for v in a.hiper if v not in HIPER]}. Opciones: {list(HIPER)}")
     desconocidos = [m for m in a.modelos if not valido(m.rsplit("-f", 1)[0] if a.cv else m)]
     if desconocidos:
         sys.exit(f"Modelos desconocidos: {desconocidos}. Opciones: {NANO + GRANDE}, con sufijos -hsv y/o -1024")
+    ks = a.folds or list(range(1, a.cv + 1))
+    if a.cv and (min(ks) < 1 or max(ks) > a.cv):
+        sys.exit(f"--folds debe estar entre 1 y {a.cv}")
     import torch
     n_gpu = torch.cuda.device_count()
     if n_gpu == 0:
@@ -653,11 +826,12 @@ def main():
 
     from kaggle_fresas import revisiones
     rev = revisiones()
-    nombre = a.nombre or (f"cv{a.cv}_{a.particion_de}" if a.cv else f"{len(rev)}lotes")
-    origen = a.particion_de if a.cv else nombre
+    # origen = la corrida cuya partición (train/val/test) se usa; con --cv --nueva-particion se arma una nueva con todo lo revisado
+    origen = (f"{len(rev)}lotes" if a.nueva_particion else a.particion_de) if a.cv else (a.nombre or f"{len(rev)}lotes")
+    nombre = a.nombre or (f"hiper{a.cv}_{origen}" if a.hiper is not None else f"cv{a.cv}_{origen}" if a.cv else origen)
     ds = Path("/tmp/ds_fresas")
     fijo = None
-    if a.cv or not a.nueva_particion:   # reusar la partición guardada en GitHub, si existe, para que los resultados sean comparables
+    if not a.nueva_particion:   # reusar la partición guardada en GitHub, si existe, para que los resultados sean comparables
         subprocess.run(["git", "fetch", "-q", "origin", RAMA], cwd=REPO, capture_output=True)
         r = subprocess.run(["git", "show", f"origin/{RAMA}:benchmark/{origen}/particion.json"], cwd=REPO,
                            capture_output=True, text=True)
@@ -665,12 +839,17 @@ def main():
             fijo = {x: sp for sp, xs in json.loads(r.stdout).items() for x in xs}
             log(f"Reuso la partición guardada de «{origen}» ({len(fijo)} fotos).")
         elif a.cv:
-            sys.exit(f"--cv necesita la partición guardada de «{origen}» en la rama {RAMA}.")
+            sys.exit(f"--cv necesita la partición guardada de «{origen}» en la rama {RAMA} "
+                     "(o --nueva-particion para armar una nueva con todas las fotos revisadas).")
+    elif a.cv:
+        log(f"Partición nueva con todas las fotos revisadas ({len(rev)} lotes): test fijo nuevo; los resultados no son "
+            f"comparables con los de otra partición.")
     reparto, listas = particionar(rev, ds, a.partes, sobremuestreo=a.sobremuestreo, fijo=fijo)
     if a.cv:
         folds = repartir_folds(ds, listas, a.cv)
         listas = {"test": listas["test"], "folds": folds}
-        a.modelos = [f"{m}-f{k}" for k in range(1, a.cv + 1) for m in a.modelos]   # fold por fold: así todos avanzan parejo
+        mods = [f"{m}_{v}" for m in a.modelos for v in a.hiper] if a.hiper is not None else a.modelos
+        a.modelos = [f"{m}-f{k}" for k in ks for m in mods]   # fold por fold: así todos avanzan parejo
     import hashlib
     huella = hashlib.sha1(json.dumps([a.partes, a.sobremuestreo, a.cls_pw, listas], sort_keys=True).encode()).hexdigest()[:12]
     sal = Path(a.salida) / nombre
@@ -690,14 +869,19 @@ def main():
         log("Folds (fotos): " + ", ".join(f"f{k} {len(v)}" for k, v in listas["folds"].items()) + f" · test fijo {len(listas['test'])}")
     info = {"nombre": nombre, "lotes": sorted(rev), "fotos": n, "gpus": gpus, "reparto": reparto, "cls_pw": a.cls_pw}
     escribir(sal / "config.json", info | {"modelos": a.modelos, "epochs": a.epochs, "horas": a.horas, "partes": a.partes,
-                                          "huella_particion": huella, "inicio": time.strftime("%Y-%m-%d %H:%M")})
+                                          "huella_particion": huella, "inicio": time.strftime("%Y-%m-%d %H:%M"),
+                                          "particion_de": origen, "folds": ks if a.cv else None,
+                                          "hiper": {v: HIPER[v] for v in a.hiper} if a.hiper is not None else None})
     escribir(sal / "particion.json", listas)
     log("Reparto (fotos y % de cajas por estado):\n" + "\n".join(tabla_reparto(reparto)))
     datas = []
-    for g in range(n_gpu if a.cv else 0):   # validación cruzada: un dataset por fold y por GPU (imágenes enlazadas)
-        for k in range(1, a.cv + 1):
-            armar_fold(ds, folds, k, Path(f"/tmp/cv_g{g}/f{k}"), a.sobremuestreo)
-        datas.append(f"/tmp/cv_g{g}/f{{f}}/data.yaml")
+    # validación cruzada: un dataset por fold, por sobremuestreo y por GPU (imágenes enlazadas, no copiadas)
+    sms = sorted({HIPER[v].get("sobremuestreo", a.sobremuestreo) for v in (a.hiper or [])} | {a.sobremuestreo})
+    for g in range(n_gpu if a.cv else 0):
+        for sm in sms:
+            for k in ks:
+                armar_fold(ds, folds, k, Path(f"/tmp/cv_g{g}/sm{sm}/f{k}"), sm)
+        datas.append(f"/tmp/cv_g{g}/sm{{sm}}/f{{f}}/data.yaml")
     for g in range(0 if a.cv else n_gpu):   # una copia por GPU: así no chocan al escribir la caché de etiquetas
         d = Path(f"/tmp/ds_fresas_g{g}")
         shutil.rmtree(d, ignore_errors=True)
@@ -711,7 +895,8 @@ def main():
     def lanzar(g):
         cmd = [sys.executable, __file__, "--worker", "--gpu", str(g), "--n-gpu", str(n_gpu), "--deadline", str(fin),
                "--data", datas[g], "--salida", str(sal), "--epochs", str(a.epochs),
-               "--workers", str(max(2, (os.cpu_count() or 4) // n_gpu)), "--cls-pw", str(a.cls_pw), "--modelos", *a.modelos]
+               "--workers", str(max(2, (os.cpu_count() or 4) // n_gpu)), "--cls-pw", str(a.cls_pw),
+               "--sobremuestreo", str(a.sobremuestreo), "--modelos", *a.modelos]
         env = os.environ | {"CUDA_VISIBLE_DEVICES": str(g)}
         out = open(sal / "logs" / f"gpu{g}.log", "a")
         return subprocess.Popen(cmd, env=env, stdout=out, stderr=subprocess.STDOUT)

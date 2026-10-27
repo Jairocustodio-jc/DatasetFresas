@@ -16,6 +16,19 @@ revisa el registro de abajo antes de afirmar algo.
    test de 235 fotos y 152 fresas comerciales; un solo etiquetador.
 6. **Métrica principal:** acierto comercial y error crítico (fresas commercial-basic/high, predicción más segura por fresa).
    mAP se reporta, pero no decide entre modelos.
+7. **Los hiperparámetros se eligen con la validación, nunca con el test.** `kaggle_benchmark.py --hiper` entrena cada
+   variante de la receta (una cosa a la vez respecto de «base») en los mismos folds de la CV y la compara contra base por
+   el acierto comercial en la validación de cada fold (t pareada + Holm). Una variante solo se adopta si gana con
+   p_Holm < 0,05 y en la mayoría de los folds; si ninguna lo hace, se mantiene la receta base. El test fijo se reporta de
+   referencia y no participa en la elección. Hasta hoy no se ha hecho: la receta actual se fijó a mano.
+
+## Orden de trabajo cuando se termine de etiquetar (lotes 1–11)
+1. `--cv 5 --nueva-particion` con los finalistas (YOLO12n, YOLOv9t y YOLO26n a 1024 px; v10n y 11n si hay tiempo):
+   partición y test fijo nuevos con todas las fotos; esta es la comparación que va a la tesis. Ningún resultado de la
+   partición de 6 lotes se mezcla con esta.
+2. Con el modelo que gane (o los dos primeros si empatan con Holm): `--hiper --particion-de 11lotes`, primero
+   `--folds 1 2 3` y después el resto. Si una variante gana según la regla 7, se repite la CV del paso 1 con ella.
+3. Velocidad en la Raspberry Pi 5 de los finalistas (640 y 1024 px) antes de decidir el modelo final.
 
 ## Registro de decisiones tomadas con evidencia débil (pendientes de confirmar)
 | Decisión | Se basó en | Estado |
