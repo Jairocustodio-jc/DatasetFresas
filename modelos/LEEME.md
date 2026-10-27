@@ -41,6 +41,14 @@ los mismos folds y las compara contra base por el acierto comercial en la valida
 corrección de Holm. El test nunca elige hiperparámetros. Los comandos están en el docstring del script; el protocolo, en
 `PROTOCOLO_VISION.md`.
 
+## Segunda etapa y mapas de calor (`kaggle_dos_etapas.py`, `kaggle_cobertura.py`)
+`kaggle_dos_etapas.py` entrena clasificadores de recortes (yolo11n-cls, MobileNetV3, EfficientNet-B0, ResNet-18; entropía
+cruzada y variante ordinal) en los mismos folds y test fijo de la CV, los elige por validación y compara en el test, fresa
+por fresa, YOLO solo contra YOLO + clasificador (McNemar mid-p, IC bootstrap por foto) y la cota con cajas reales.
+`kaggle_cobertura.py` calcula Grad-CAM del clasificador y EigenCAM del detector sobre las fresas comerciales del test y
+mide la cobertura dentro de la elipse de la caja (cobertura@τ, entropía, gini, masa dentro) en aciertos y errores. Diseño y
+evidencia: `INVESTIGACION_DOS_ETAPAS.md` y `reports/Dos etapas y cobertura en fresa.md`.
+
 ## Sugerencias de los lotes 7 a 11 (YOLOv9t a 1024 px)
 `yolo_fresas_v9t_1024.pt`: YOLOv9t a 1024 px del benchmark (entrenado con la partición 70/15/15 de los lotes 1–6). En la
 validación cruzada de 5 folds quedó empatado en primer lugar con YOLO12n-1024 (75,7 ± 3,0 % de acierto comercial).
