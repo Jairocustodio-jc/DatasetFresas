@@ -46,6 +46,18 @@ secundaria (3) un mapa de fresas listas por fresa individual. Consecuencias:
   fresas comerciales por surco con ± X % y 95 % de confianza» (X = 10 % es un valor razonable para planificar cosecha) y de
   ahí salen el sesgo máximo tolerable tras calibrar y el número de fotos/plantas por surco. Es más fácil de defender y de
   cumplir que el 94 % del muestreo de aceptación.
+- **Justificación estadística en detalle (29/10):** la estimación es N̂ = conteo / k, con k el factor de calibración
+  (sesgo) medido contra conteo manual. Su error relativo tiene dos partes que se suman en cuadratura: la incertidumbre de k
+  (se reduce con más unidades de calibración) y la variación del conteo entre unidades (se reduce con más fresas por
+  unidad, ≈ 1/√n). Medido en el test con YOLOv9t-1024 del fold 1 (235 fotos, 152 comerciales): k = 1,22 (+21,7 %); tras
+  calibrar, el error relativo de una unidad de 10 fotos (≈ 6 comerciales) tiene SD 29 %; de 20 fotos (≈ 13), 16 %; de 40
+  fotos (≈ 26), 10 %. Para ± 10 % con 95 % de confianza hacen falta ≈ 100 fresas comerciales por unidad (≈ 160 fotos
+  de este dataset) **o** varias vistas por planta (tracking), que es lo que el robot hará. La verificación final en campo
+  es una prueba de equivalencia (TOST) con margen ± 10 % entre el conteo calibrado y el manual por unidad.
+  Para la proporción por estado (uso 2), el método estadístico es la **cuantificación** (Forman 2008, *Data Mining and
+  Knowledge Discovery* 17; González et al. 2017, *ACM Computing Surveys* 50): la prevalencia se corrige con la matriz de
+  confusión del clasificador (p = (p̂ − FPR) / (TPR − FPR)), lo que da una estimación insesgada aunque el acierto por fresa
+  sea 76 %, con la condición de que la matriz de confusión sea estable entre el test y el campo.
 - **Código:** `kaggle_benchmark.py` guarda ahora el conteo por foto del detector en el test (`conteo` en res_*.json; columnas
   «Sesgo conteo com.» y «R² conteo com.» en la tabla de la CV) y `kaggle_dos_etapas.py` lo reporta para YOLO solo y
   YOLO + clasificador (sección 5 del RESUMEN). Pendiente: conteo por planta/surco con varias vistas (tracking), que es lo que
