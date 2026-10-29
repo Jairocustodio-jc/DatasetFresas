@@ -97,7 +97,7 @@ Lo que sí da la estadística es cuánto hay que medir:
 - Para estimar el recall en campo con ± 5 puntos (IC 95 %) alrededor de 90 %: n ≈ 1,96² · 0,9 · 0,1 / 0,05² ≈ **140 fresas**
   contadas a mano en la planta y comparadas con lo que el robot detecta.
 - Para verificar que la precisión de cosecha es ≥ 94 % contra la alternativa de 90 % (una cola, α = 5 %, potencia 80 %):
-  n ≈ **360 fresas cosechadas**. Con las 152 fresas comerciales del test actual el IC de la precisión es de ± 6 puntos:
+  n ≈ **300 fresas cosechadas**. Con las 152 fresas comerciales del test actual el IC de la precisión es de ± 7 puntos:
   sirve para decir que hoy no se cumple, no para certificar que se cumple. Por eso la verificación final va con la CV del
   dataset completo (≈ 300 fresas comerciales en test) o con un conjunto de prueba de Huaral.
 
