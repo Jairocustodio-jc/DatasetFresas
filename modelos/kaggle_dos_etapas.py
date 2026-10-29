@@ -309,11 +309,17 @@ def evaluar(clf, dets, ds, margen, tam):
         img = cv2.imread(str(p))
         h, w = img.shape[:2]
         pr = dets.get(p.name, [])
-        for i, (c, b) in enumerate(cajas_de(ds, "test", p.stem)):
+        cajas = cajas_de(ds, "test", p.stem)
+        for i, (c, b) in enumerate(cajas):
             cand = [q for q in pr if iou(b, q[0]) >= 0.5]
             top = max(cand, key=lambda q: q[2]) if cand else None
+            # indicios de oclusión (sin etiqueta de oclusión): fracción de la caja cubierta por otras cajas reales y contacto con el borde
+            area = max((b[2] - b[0]) * (b[3] - b[1]), 1e-9)
+            solape = max([(max(0, min(b[2], o[2]) - max(b[0], o[0])) * max(0, min(b[3], o[3]) - max(b[1], o[1]))) / area
+                          for j, (_, o) in enumerate(cajas) if j != i], default=0.0)
+            borde = b[0] < 0.005 or b[1] < 0.005 or b[2] > 0.995 or b[3] > 0.995
             fila = {"foto": p.name, "i": i, "real": c, "yolo": top[1] if top else "no_detectada", "conf": top[2] if top else None,
-                    "lado_px": round(min((b[2] - b[0]) * w, (b[3] - b[1]) * h), 1)}
+                    "lado_px": round(min((b[2] - b[0]) * w, (b[3] - b[1]) * h), 1), "solape": round(float(solape), 3), "borde": bool(borde)}
             filas.append(fila)
             rec_gt.append(recortar(img, [b[0] * w, b[1] * h, b[2] * w, b[3] * h], margen, tam))
             if top:
@@ -328,6 +334,23 @@ def evaluar(clf, dets, ds, margen, tam):
     for j, k in zip(idx, p_det):
         filas[j]["dos_etapas"] = ORD[int(k)]
     return filas
+
+
+def estrato(f):
+    """Estrato de oclusión aproximado: «borde» (caja cortada por la foto), «solapada» (≥ 10 % cubierta por otra caja) o «libre».
+    No ve la oclusión por hojas: para eso hace falta etiquetar la oclusión a mano."""
+    return "borde" if f["borde"] else ("solapada" if f["solape"] >= 0.1 else "libre")
+
+
+def por_oclusion(filas):
+    """Acierto comercial y error crítico de YOLO solo, YOLO + clasificador y cota, por estrato de oclusión aproximado."""
+    out = {}
+    for e in ("libre", "solapada", "borde"):
+        xs = [f for f in filas if f["real"] in COMERCIAL and estrato(f) == e]
+        out[e] = {"n": len(xs)} | {k: {"acierto_comercial": round(100 * sum(f[k] == f["real"] for f in xs) / len(xs), 1),
+                                       "error_critico": round(100 * sum(f[k] in CRITICO for f in xs) / len(xs), 1)} if xs else None
+                                   for k in ("yolo", "dos_etapas", "cota")}
+    return out
 
 
 def metricas(filas, clave):
@@ -441,6 +464,20 @@ def resumen(sal, info):
                 else:
                     celdas.append("–")
             t.append(f"| {d} | {g} | " + " | ".join(celdas) + " |")
+    con_ocl = [(d, g) for d in dets for g in orden if any("por_oclusion" in r["test"].get(d, {}) for r in grupos[g].values())]
+    if con_ocl:
+        t += ["", "## 4. Por indicio de oclusión (fresas comerciales del test; media entre folds)", "",
+              "«libre»: caja sin otra caja encima y sin tocar el borde; «solapada»: ≥ 10 % cubierta por otra caja real; «borde»: cortada por "
+              "la foto. No captura la oclusión por hojas (hace falta etiqueta manual). Acierto com. / error crít.", "",
+              "| Detector | Clasificador · variante | Estrato | n | YOLO solo | + clasif. | Cota |", "|---|---|---|---|---|---|---|"]
+        for d, g in con_ocl:
+            for e in ("libre", "solapada", "borde"):
+                xs = [r["test"][d]["por_oclusion"][e] for r in grupos[g].values() if "por_oclusion" in r["test"].get(d, {})]
+                xs = [x for x in xs if x["n"]]
+                if not xs:
+                    continue
+                m_ = lambda k: f"{st.mean(x[k]['acierto_comercial'] for x in xs):.1f} / {st.mean(x[k]['error_critico'] for x in xs):.1f}"
+                t.append(f"| {d} | {g} | {e} | {xs[0]['n']} | {m_('yolo')} | {m_('dos_etapas')} | {m_('cota')} |")
     pend = [k for k in info["trabajos"] if k not in res]
     if pend:
         t += ["", "**Pendientes:** " + ", ".join(pend)]
@@ -542,7 +579,8 @@ def main():
                     filas = evaluar(clf, dd, dk, a.margen, a.tam)
                     escribir(sal / f"fresas_{t}_{d}.json", filas)
                     res["test"][d] = {"yolo": metricas(filas, "yolo"), "dos_etapas": metricas(filas, "dos_etapas"),
-                                      "cota": metricas(filas, "cota"), "comparacion": comparar(filas, "yolo", "dos_etapas")}
+                                      "cota": metricas(filas, "cota"), "comparacion": comparar(filas, "yolo", "dos_etapas"),
+                                      "por_oclusion": por_oclusion(filas)}
                 res |= {"trabajo": t, "clasificador": clf_n, "variante": var, "fold": k, "estado": "completo",
                         "minutos": round((time.time() - t0) / 60, 1), "recuento": tabla}
                 x = res["test"][a.detectores[0]]
