@@ -22,7 +22,36 @@ revisa el registro de abajo antes de afirmar algo.
    p_Holm < 0,05 y en la mayoría de los folds; si ninguna lo hace, se mantiene la receta base. El test fijo se reporta de
    referencia y no participa en la elección. Hasta hoy no se ha hecho: la receta actual se fijó a mano.
 
-## Metas del sistema y su justificación (borrador para el asesor, 27/10/2026)
+## Metas del sistema y su justificación (borrador para el asesor, 27/10/2026; replanteado el 29/10)
+
+### Replanteo (29/10/2026): el robot es de MONITOREO, no cosechador
+La salida del sistema no es una caja de fresas sino una **estimación**: cuántas fresas hay en cada estado por planta, surco
+o fecha, para (1) planificar la cosecha (cuándo y cuánta gente) y (2) seguir la maduración en el tiempo; solo de forma
+secundaria (3) un mapa de fresas listas por fresa individual. Consecuencias:
+- **El muestreo de aceptación (más abajo) deja de ser la justificación principal**: aplica solo si la salida se usa por
+  fresa individual (uso 3). Se conserva como referencia.
+- **La métrica correcta para (1) y (2) es el error del conteo**, no el acierto por fresa: sesgo = (contadas − reales)/reales,
+  error absoluto medio por foto (y por planta/surco cuando haya campo) y R² entre el conteo predicho y el real; para (2),
+  además, el error de la proporción de cada estado. Es la métrica de los trabajos de monitoreo (p. ej. conteo con
+  YOLOv8s + ByteTrack: R² 0,95 maduras / 0,75 semimaduras / 0,91 verdes), y ahí sí hay literatura para apoyarse.
+- En un conteo los errores por fresa se compensan en parte: basic ↔ high no mueve el total de comerciales; lo que lo mueve
+  son los **errores críticos** y las **detecciones de más** (sin fresa anotada). Medido en el test con YOLOv9t-1024
+  (benchmark 6 lotes): comerciales reales 152, contadas 200 → **sesgo +32 %** (basic +25 %, high +35 %; early-pink +6 %,
+  overripe +10 %), por 38 detecciones sin caja real y 26 early-pink/overripe contadas como comerciales. Un sesgo estable se
+  **calibra** con un factor medido en campo; la varianza entre fotos no. Lo primero que hay que establecer es si el sesgo es
+  estable entre folds, lotes y plantas.
+- **El 90 % de detección** pasa a ser un subconteo sistemático por oclusión, también calibrable si es estable (y medible en
+  Huaral contando a mano, ≈ 140 fresas para ± 5 puntos). **El 85 % de clasificación** pasa a ser el sesgo por clase.
+- **Justificación estadística de la meta (nueva):** precisión de la estimación. Fijar con el asesor «estimar el número de
+  fresas comerciales por surco con ± X % y 95 % de confianza» (X = 10 % es un valor razonable para planificar cosecha) y de
+  ahí salen el sesgo máximo tolerable tras calibrar y el número de fotos/plantas por surco. Es más fácil de defender y de
+  cumplir que el 94 % del muestreo de aceptación.
+- **Código:** `kaggle_benchmark.py` guarda ahora el conteo por foto del detector en el test (`conteo` en res_*.json; columnas
+  «Sesgo conteo com.» y «R² conteo com.» en la tabla de la CV) y `kaggle_dos_etapas.py` lo reporta para YOLO solo y
+  YOLO + clasificador (sección 5 del RESUMEN). Pendiente: conteo por planta/surco con varias vistas (tracking), que es lo que
+  el robot entregará de verdad.
+
+### Versión anterior (robot cosechador): se mantiene como referencia
 El acierto del sistema se descompone en dos factores que se justifican y se miden por separado:
 
 **acierto del sistema = recall en campo (fresas que el robot llega a ver y detectar) × acierto sobre las fresas visibles.**

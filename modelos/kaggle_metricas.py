@@ -65,6 +65,47 @@ def matriz(mod, ds, imgsz, dev, conf=0.25, iou_min=0.45):
     return M
 
 
+def metricas_conteo(reales, predichos):
+    """Métricas de conteo por foto (monitoreo): {clase: {sesgo_pct, mae, r2, real, predicho}} más «comercial» y «proporcion_comercial».
+    reales / predichos: {foto: {clase: n}}. sesgo = (Σpred − Σreal)/Σreal; R² entre el conteo predicho y el real por foto."""
+    fotos = sorted(reales)
+    def r2(x, y):
+        x, y = np.array(x, float), np.array(y, float)
+        ss = ((x - x.mean()) ** 2).sum()
+        return round(float(1 - ((y - x) ** 2).sum() / ss), 3) if ss else None
+    out = {}
+    grupos = {c: [c] for c in ORD_METRICAS} | {"comercial": ["commercial-basic", "commercial-high"], "total": list(ORD_METRICAS)}
+    for g, cs in grupos.items():
+        x = [sum(reales[f].get(c, 0) for c in cs) for f in fotos]
+        y = [sum(predichos[f].get(c, 0) for c in cs) for f in fotos]
+        out[g] = {"real": int(sum(x)), "predicho": int(sum(y)), "sesgo_pct": round(100 * (sum(y) - sum(x)) / sum(x), 1) if sum(x) else None,
+                  "mae_por_foto": round(float(np.mean(np.abs(np.array(y) - np.array(x)))), 2), "r2": r2(x, y)}
+    px = [sum(reales[f].get(c, 0) for c in grupos["comercial"]) / max(sum(reales[f].values()), 1) for f in fotos]
+    py = [sum(predichos[f].get(c, 0) for c in grupos["comercial"]) / max(sum(predichos[f].values()), 1) for f in fotos]
+    out["proporcion_comercial"] = {"real": round(100 * float(np.mean(px)), 1), "predicha": round(100 * float(np.mean(py)), 1),
+                                   "mae_por_foto_pts": round(100 * float(np.mean(np.abs(np.array(py) - np.array(px)))), 1)}
+    return out
+
+
+ORD_METRICAS = ["unripe", "early-pink", "commercial-basic", "commercial-high", "overripe"]
+
+
+def conteo(mod, ds, imgsz, dev, conf=0.25):
+    """Conteo por foto y clase del detector en el test (lo que entrega un robot de monitoreo), contra las cajas reales."""
+    reales, predichos = {}, {}
+    for p in sorted((ds / "images" / "test").iterdir()):
+        r = mod.predict(str(p), imgsz=imgsz, conf=conf, device=dev, verbose=False)[0]
+        predichos[p.name] = {}
+        for c in r.boxes.cls.tolist():
+            predichos[p.name][ORD_METRICAS[int(c)]] = predichos[p.name].get(ORD_METRICAS[int(c)], 0) + 1
+        reales[p.name] = {}
+        for l in (ds / "labels" / "test" / f"{p.stem}.txt").read_text().split("\n"):
+            if l.strip():
+                c = ORD_METRICAS[int(l.split()[0])]
+                reales[p.name][c] = reales[p.name].get(c, 0) + 1
+    return metricas_conteo(reales, predichos)
+
+
 def subir(carpeta, tok):
     """Copia la carpeta a benchmark/6lotes/test_metricas/ de la rama yolo-benchmark sin tocar lo demás."""
     url = f"https://x-access-token:{tok}@github.com/{GH}.git"

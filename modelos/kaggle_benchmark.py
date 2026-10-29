@@ -395,6 +395,8 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             fp, fn = M[c, :].sum() - tp, M[:, c].sum() - tp
             E[ORD_[c]] = round(100 * (M.sum() - tp - fp - fn) / (M.sum() - tp - fn), 2)
         res |= {"especificidad": round(sum(E.values()) / len(E), 2), "especificidad_clase": E}
+        from kaggle_metricas import conteo   # monitoreo: conteo por foto y clase contra las cajas reales
+        res["conteo"] = conteo(mb, Path(a.data).parent, imgsz, a.dev)
         from ultralytics.utils.torch_utils import get_flops, get_num_params
         res |= {"params_M": round(get_num_params(mb.model) / 1e6, 2), "gflops": round(float(get_flops(mb.model, 640)), 1)}
     except Exception as e:
@@ -641,12 +643,17 @@ def resumen(sal, modelos, info):
             v = [f * r[k] for r in rs if r.get(k) is not None]
             return (f"{st.mean(v):.1f} ± {st.stdev(v):.1f}" if len(v) > 1 else f"{v[0]:.1f}") if v else "–"
         t += ["", "**Validación cruzada: media ± desviación entre folds, medida en el test fijo**", "",
-              "| Modelo | Folds | mAP@0.5 | mAP@0.5:0.95 | Precisión | Recall | Especif. | Acierto com. | Error crít. | mAP@0.5 (val del fold) |",
-              "|---|---|---|---|---|---|---|---|---|---|"]
+              "Conteo (monitoreo): sesgo = (comerciales contadas − reales) / reales en todo el test; R² entre el conteo de comerciales "
+              "predicho y el real por foto.", "",
+              "| Modelo | Folds | mAP@0.5 | mAP@0.5:0.95 | Precisión | Recall | Especif. | Acierto com. | Error crít. | Sesgo conteo com. | R² conteo com. | mAP@0.5 (val del fold) |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+        def mc(rs, k):
+            v = [r["conteo"]["comercial"][k] for r in rs if r.get("conteo") and r["conteo"]["comercial"].get(k) is not None]
+            return (f"{st.mean(v):+.1f} ± {st.stdev(v):.1f}" if k == "sesgo_pct" else f"{st.mean(v):.2f} ± {st.stdev(v):.2f}") if len(v) > 1 else (f"{v[0]}" if v else "–")
         for m, rs in sorted(cv.items(), key=lambda x: -sum(r.get("acierto_comercial") or 0 for r in x[1]) / len(x[1])):
             t.append(f"| {m} | {len(rs)} | {ms(rs, 'map50', 100)} | {ms(rs, 'map50_95', 100)} | {ms(rs, 'precision', 100)} | "
                      f"{ms(rs, 'recall', 100)} | {ms(rs, 'especificidad')} | {ms(rs, 'acierto_comercial')} | "
-                     f"{ms(rs, 'error_critico')} | {ms(rs, 'val_map50', 100)} |")
+                     f"{ms(rs, 'error_critico')} | {mc(rs, 'sesgo_pct')} | {mc(rs, 'r2')} | {ms(rs, 'val_map50', 100)} |")
     hip = {}
     for r in filas:
         if "_" in r["modelo"] and r.get("val_acierto_comercial") is not None:

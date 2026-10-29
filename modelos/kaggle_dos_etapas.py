@@ -305,11 +305,20 @@ def evaluar(clf, dets, ds, margen, tam):
     """Por cada caja real del test: YOLO solo, YOLO + clasificador (recorte de la detección) y cota (recorte de la caja real)."""
     import cv2
     filas, rec_det, rec_gt, idx = [], [], [], []
+    reales, cnt_yolo, rec_todas, due = {}, {}, [], []     # conteo por foto (monitoreo): todas las detecciones, también las sin caja real
     for p in sorted((ds / "images" / "test").iterdir()):
         img = cv2.imread(str(p))
         h, w = img.shape[:2]
         pr = dets.get(p.name, [])
         cajas = cajas_de(ds, "test", p.stem)
+        reales[p.name] = {}
+        for c, _ in cajas:
+            reales[p.name][c] = reales[p.name].get(c, 0) + 1
+        cnt_yolo[p.name] = {}
+        for d, c, _ in pr:
+            cnt_yolo[p.name][c] = cnt_yolo[p.name].get(c, 0) + 1
+            rec_todas.append(recortar(img, [d[0] * w, d[1] * h, d[2] * w, d[3] * h], margen, tam))
+            due.append(p.name)
         for i, (c, b) in enumerate(cajas):
             cand = [q for q in pr if iou(b, q[0]) >= 0.5]
             top = max(cand, key=lambda q: q[2]) if cand else None
@@ -333,7 +342,12 @@ def evaluar(clf, dets, ds, margen, tam):
         f["dos_etapas"] = "no_detectada"
     for j, k in zip(idx, p_det):
         filas[j]["dos_etapas"] = ORD[int(k)]
-    return filas
+    cnt_de = {f: {} for f in reales}
+    for f, k in zip(due, clf.probs(rec_todas).argmax(1)):
+        cnt_de[f][ORD[int(k)]] = cnt_de[f].get(ORD[int(k)], 0) + 1
+    from kaggle_metricas import metricas_conteo
+    conteo = {"yolo": metricas_conteo(reales, cnt_yolo), "dos_etapas": metricas_conteo(reales, cnt_de)}
+    return filas, conteo
 
 
 def estrato(f):
@@ -478,6 +492,24 @@ def resumen(sal, info):
                     continue
                 m_ = lambda k: f"{st.mean(x[k]['acierto_comercial'] for x in xs):.1f} / {st.mean(x[k]['error_critico'] for x in xs):.1f}"
                 t.append(f"| {d} | {g} | {e} | {xs[0]['n']} | {m_('yolo')} | {m_('dos_etapas')} | {m_('cota')} |")
+    con_cnt = [(d, g) for d in dets for g in orden if any("conteo" in r["test"].get(d, {}) for r in grupos[g].values())]
+    if con_cnt:
+        t += ["", "## 5. Conteo por foto (monitoreo): comerciales contadas contra reales, media entre folds", "",
+              "Cuenta TODAS las detecciones (también las sin caja real). Sesgo = (contadas − reales) / reales en el test; MAE = error "
+              "absoluto medio por foto; R² = ajuste del conteo por foto; «prop.» = proporción de comerciales entre todas las fresas de la foto "
+              "(real contra predicha, error medio en puntos).", "",
+              "| Detector | Clasificador · variante | Modo | Sesgo com. | MAE com./foto | R² com. | Sesgo basic | Sesgo high | Sesgo early-pink | Sesgo overripe | Prop. com. real → pred. (MAE) |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for d, g in con_cnt:
+            for modo in ("yolo", "dos_etapas"):
+                cs = [r["test"][d]["conteo"][modo] for r in grupos[g].values() if "conteo" in r["test"].get(d, {})]
+                sg = lambda k: ("–" if any(c[k]["sesgo_pct"] is None for c in cs) else f"{st.mean(c[k]['sesgo_pct'] for c in cs):+.1f} %")
+                r2 = "–" if any(c["comercial"]["r2"] is None for c in cs) else f"{st.mean(c['comercial']['r2'] for c in cs):.2f}"
+                pc = cs[0]["proporcion_comercial"]
+                t.append(f"| {d} | {g} | {'YOLO solo' if modo == 'yolo' else 'YOLO + clasif.'} | **{sg('comercial')}** | "
+                         f"{st.mean(c['comercial']['mae_por_foto'] for c in cs):.2f} | {r2} | {sg('commercial-basic')} | {sg('commercial-high')} | "
+                         f"{sg('early-pink')} | {sg('overripe')} | {pc['real']} → {st.mean(c['proporcion_comercial']['predicha'] for c in cs):.1f} "
+                         f"({st.mean(c['proporcion_comercial']['mae_por_foto_pts'] for c in cs):.1f}) |")
     pend = [k for k in info["trabajos"] if k not in res]
     if pend:
         t += ["", "**Pendientes:** " + ", ".join(pend)]
@@ -576,11 +608,11 @@ def main():
                 clf = Clasificador(clf_n, peso, dev, a.tam)
                 res["test"] = {}
                 for d, dd in dets.items():
-                    filas = evaluar(clf, dd, dk, a.margen, a.tam)
+                    filas, conteo = evaluar(clf, dd, dk, a.margen, a.tam)
                     escribir(sal / f"fresas_{t}_{d}.json", filas)
                     res["test"][d] = {"yolo": metricas(filas, "yolo"), "dos_etapas": metricas(filas, "dos_etapas"),
                                       "cota": metricas(filas, "cota"), "comparacion": comparar(filas, "yolo", "dos_etapas"),
-                                      "por_oclusion": por_oclusion(filas)}
+                                      "por_oclusion": por_oclusion(filas), "conteo": conteo}
                 res |= {"trabajo": t, "clasificador": clf_n, "variante": var, "fold": k, "estado": "completo",
                         "minutos": round((time.time() - t0) / 60, 1), "recuento": tabla}
                 x = res["test"][a.detectores[0]]
