@@ -1,0 +1,118 @@
+{
+ "nombre": "cv5_11lotes_v9t",
+ "lotes": [
+  "lote_01",
+  "lote_02",
+  "lote_03",
+  "lote_04",
+  "lote_05",
+  "lote_06",
+  "lote_07",
+  "lote_08",
+  "lote_09",
+  "lote_10",
+  "lote_11"
+ ],
+ "fotos": 3077,
+ "gpus": "Tesla T4, Tesla T4",
+ "reparto": {
+  "train": {
+   "fotos": 2151,
+   "copias_extra": 1064,
+   "cajas": {
+    "unripe": 7437,
+    "early-pink": 790,
+    "commercial-basic": 403,
+    "commercial-high": 926,
+    "overripe": 1628
+   },
+   "por_lote": {
+    "lote_01": 207,
+    "lote_02": 208,
+    "lote_03": 210,
+    "lote_04": 209,
+    "lote_05": 207,
+    "lote_06": 208,
+    "lote_07": 210,
+    "lote_08": 207,
+    "lote_09": 208,
+    "lote_10": 208,
+    "lote_11": 69
+   }
+  },
+  "val": {
+   "fotos": 463,
+   "copias_extra": 0,
+   "cajas": {
+    "unripe": 1571,
+    "early-pink": 169,
+    "commercial-basic": 86,
+    "commercial-high": 198,
+    "overripe": 378
+   },
+   "por_lote": {
+    "lote_01": 45,
+    "lote_02": 44,
+    "lote_03": 45,
+    "lote_04": 45,
+    "lote_05": 44,
+    "lote_06": 45,
+    "lote_07": 45,
+    "lote_08": 45,
+    "lote_09": 45,
+    "lote_10": 45,
+    "lote_11": 15
+   }
+  },
+  "test": {
+   "fotos": 463,
+   "copias_extra": 0,
+   "cajas": {
+    "unripe": 1633,
+    "early-pink": 170,
+    "commercial-basic": 86,
+    "commercial-high": 198,
+    "overripe": 333
+   },
+   "por_lote": {
+    "lote_01": 44,
+    "lote_02": 45,
+    "lote_03": 45,
+    "lote_04": 45,
+    "lote_05": 45,
+    "lote_06": 45,
+    "lote_07": 45,
+    "lote_08": 44,
+    "lote_09": 45,
+    "lote_10": 45,
+    "lote_11": 15
+   }
+  }
+ },
+ "cls_pw": 0.5,
+ "modelos": [
+  "yolov9t-1024-f1",
+  "yolov9t-1024-f2",
+  "yolov9t-1024-f3",
+  "yolov9t-1024-f4",
+  "yolov9t-1024-f5"
+ ],
+ "epochs": 100,
+ "horas": 11.0,
+ "partes": [
+  0.7,
+  0.15,
+  0.15
+ ],
+ "huella_particion": "ad74fb6d850e",
+ "inicio": "2026-11-04 04:12",
+ "particion_de": "11lotes",
+ "folds": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "hiper": null
+}
