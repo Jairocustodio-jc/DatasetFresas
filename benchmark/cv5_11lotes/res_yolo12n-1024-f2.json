@@ -1,0 +1,135 @@
+{
+ "modelo": "yolo12n-1024-f2",
+ "tamaño": "nano",
+ "gpu": "Tesla T4",
+ "epochs_max": 100,
+ "imgsz": 1024,
+ "hsv_h": 0.0,
+ "lr0": 0.001,
+ "cls_pw": 0.5,
+ "sobremuestreo": 2,
+ "variante": "base",
+ "hiper": {},
+ "estado": "completo",
+ "parado_por_tiempo": false,
+ "batch": 8,
+ "epochs_hechas": 75,
+ "mejor_epoch": 55,
+ "minutos": 164.8,
+ "val_map50": 0.9012,
+ "val_map50_95": 0.7877,
+ "val_precision": 0.8333,
+ "val_recall": 0.8556,
+ "val_ap50_por_clase": {
+  "unripe": 0.9885,
+  "early-pink": 0.9379,
+  "commercial-basic": 0.8003,
+  "commercial-high": 0.8388,
+  "overripe": 0.9406
+ },
+ "val_acierto_comercial": 74.3,
+ "val_error_critico": 15.7,
+ "map50": 0.8334,
+ "map50_95": 0.7239,
+ "precision": 0.8043,
+ "recall": 0.8042,
+ "ap50_por_clase": {
+  "unripe": 0.9859,
+  "early-pink": 0.9075,
+  "commercial-basic": 0.5598,
+  "commercial-high": 0.7633,
+  "overripe": 0.9504
+ },
+ "acierto_comercial_cm": 68.3,
+ "error_critico_cm": 13.0,
+ "confusion_comercial": {
+  "commercial-basic": {
+   "cajas": 86,
+   "bien": 58.1,
+   "early-pink": 12.8,
+   "overripe": 1.2,
+   "otra_comercial": 26.7,
+   "unripe": 0.0,
+   "no_detectada": 1.2
+  },
+  "commercial-high": {
+   "cajas": 198,
+   "bien": 70.7,
+   "early-pink": 0.5,
+   "overripe": 12.6,
+   "otra_comercial": 16.2,
+   "unripe": 0.0,
+   "no_detectada": 0.0
+  }
+ },
+ "acierto_comercial": 66.9,
+ "error_critico": 13.4,
+ "inferencia_ms": 12.79,
+ "especificidad": 94.75,
+ "especificidad_clase": {
+  "unripe": 83.2,
+  "early-pink": 98.64,
+  "commercial-basic": 97.41,
+  "commercial-high": 96.88,
+  "overripe": 97.6
+ },
+ "conteo": {
+  "unripe": {
+   "real": 1633,
+   "predicho": 1773,
+   "sesgo_pct": 8.6,
+   "mae_por_foto": 0.36,
+   "r2": 0.893
+  },
+  "early-pink": {
+   "real": 170,
+   "predicho": 173,
+   "sesgo_pct": 1.8,
+   "mae_por_foto": 0.11,
+   "r2": 0.676
+  },
+  "commercial-basic": {
+   "real": 86,
+   "predicho": 115,
+   "sesgo_pct": 33.7,
+   "mae_por_foto": 0.19,
+   "r2": -0.112
+  },
+  "commercial-high": {
+   "real": 198,
+   "predicho": 213,
+   "sesgo_pct": 7.6,
+   "mae_por_foto": 0.22,
+   "r2": 0.383
+  },
+  "overripe": {
+   "real": 333,
+   "predicho": 360,
+   "sesgo_pct": 8.1,
+   "mae_por_foto": 0.14,
+   "r2": 0.755
+  },
+  "comercial": {
+   "real": 284,
+   "predicho": 328,
+   "sesgo_pct": 15.5,
+   "mae_por_foto": 0.23,
+   "r2": 0.495
+  },
+  "total": {
+   "real": 2420,
+   "predicho": 2634,
+   "sesgo_pct": 8.8,
+   "mae_por_foto": 0.51,
+   "r2": 0.874
+  },
+  "proporcion_comercial": {
+   "real": 14.4,
+   "predicha": 15.3,
+   "mae_por_foto_pts": 5.2
+  }
+ },
+ "params_M": 2.58,
+ "gflops": 7.5,
+ "peso_MB": 5.6
+}
