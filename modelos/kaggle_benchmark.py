@@ -84,6 +84,11 @@ HIPER = {
     "sinsobre":   {"sobremuestreo": 1},     # sin repetir las fotos con cajas comerciales
     "sobre3":     {"sobremuestreo": 3},
     "tono":       {"hsv_h": 0.015},
+    # la saturacion y el brillo son lo que distingue un rojo intenso de un naranja palido,
+    # justo el criterio del limite comercial-alto / sobremadura; la receta base los altera
+    # +-30 % en cada imagen, asi que estas variantes miden si eso borra la senal
+    "intensidad": {"hsv_s": 0.1, "hsv_v": 0.1},
+    "sinintens":  {"hsv_s": 0.0, "hsv_v": 0.0},
     "sinmosaico": {"mosaic": 0.0},          # el mosaico recorta fresas por la mitad; ¿ayuda o estorba en las comerciales?
 }
 
@@ -327,7 +332,9 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
     base, imgsz, hsv_h = ajustes(m)
     var, cfg = variante(m)   # ajustes de la variante de --hiper («base» = la receta de siempre)
     lr0, cls_pw, hsv_h = cfg.get("lr0", 0.001), cfg.get("cls_pw", a.cls_pw), cfg.get("hsv_h", hsv_h)
-    extra = {k: v for k, v in cfg.items() if k not in ("lr0", "cls_pw", "hsv_h", "sobremuestreo")}
+    hsv_s, hsv_v = cfg.get("hsv_s", 0.3), cfg.get("hsv_v", 0.3)
+    extra = {k: v for k, v in cfg.items()
+             if k not in ("lr0", "cls_pw", "hsv_h", "hsv_s", "hsv_v", "sobremuestreo")}
     batch = 8 if grande or imgsz > 640 else 16
     t0 = time.time()
     log(f"[GPU {a.gpu}] {m}: empieza (tope {tope/3600:.1f} h, batch {batch}" + (f", variante {var} {cfg}" if cfg else "") + ")")
@@ -339,7 +346,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             tr.stop = True
 
     res = {"modelo": m, "tamaño": "grande" if grande else "nano", "gpu": gpu, "epochs_max": a.epochs,
-           "imgsz": imgsz, "hsv_h": hsv_h, "lr0": lr0, "cls_pw": cls_pw,
+           "imgsz": imgsz, "hsv_h": hsv_h, "hsv_s": hsv_s, "hsv_v": hsv_v, "lr0": lr0, "cls_pw": cls_pw,
            "sobremuestreo": cfg.get("sobremuestreo", a.sobremuestreo), "variante": var, "hiper": cfg}
     for intento in range(3):
         try:
@@ -348,7 +355,7 @@ def entrenar(m, a, sal, tope, fin, gpu, YOLO):
             modelo.train(data=a.data, epochs=a.epochs, patience=20, imgsz=imgsz, batch=batch, device=a.dev,
                          optimizer="AdamW", lr0=lr0, nbs=64, seed=0, deterministic=True, workers=a.workers,
                          cache="ram" if not grande and imgsz <= 640 else False, project=str(sal / "runs"), name=m, exist_ok=True, plots=True, verbose=False,
-                         fliplr=0.5, hsv_h=hsv_h, hsv_s=0.3, hsv_v=0.3, amp=True, cls_pw=cls_pw, **extra)
+                         fliplr=0.5, hsv_h=hsv_h, hsv_s=hsv_s, hsv_v=hsv_v, amp=True, cls_pw=cls_pw, **extra)
             break
         except Exception as e:
             oom = "out of memory" in str(e).lower()

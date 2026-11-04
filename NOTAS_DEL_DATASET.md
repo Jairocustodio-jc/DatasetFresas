@@ -245,3 +245,31 @@ juzgar en una foto, mientras que la clase mide cobertura ≥ 90 %.
   3 824 cajas marcadas `difficult`.
 - **`_work/apply.py` ya no debe ejecutarse**: reconstruiría el dataset desde
   `data_anylabeling_2` y borraría las correcciones del celular.
+
+---
+
+## 7. Variante `intensidad` añadida a `--hiper` (4-11-2026)
+
+La receta base altera la saturación y el brillo ±30 % en cada imagen
+(`hsv_s=0.3, hsv_v=0.3`), que es justo lo que distingue un rojo intenso de un naranja
+pálido — el criterio del límite `comercial_alto` / `madurez_plena`. El tono sí estaba
+protegido (`hsv_h=0`), pero la intensidad no.
+
+Se añadieron dos variantes a `HIPER`:
+
+```python
+"intensidad": {"hsv_s": 0.1, "hsv_v": 0.1},
+"sinintens":  {"hsv_s": 0.0, "hsv_v": 0.0},
+```
+
+Y, necesario para que funcionen, `hsv_s`/`hsv_v` pasaron a leerse de `cfg` con valor por
+defecto 0.3 en `entrenar()`, en vez de ir fijos en la llamada a `train()`: tal como
+estaba, una variante que los tocara habría reventado con «got multiple values for
+keyword argument». También se registran ahora en `res_*.json`.
+
+Uso (en dos sesiones, para que a cada entrenamiento le sobren horas):
+
+```
+python modelos/kaggle_benchmark.py --hiper base intensidad --modelos yolo12n-1024 --nueva-particion --folds 1 2 3
+python modelos/kaggle_benchmark.py --hiper base intensidad --modelos yolo12n-1024 --nueva-particion --folds 4 5
+```
