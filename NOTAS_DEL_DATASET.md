@@ -203,3 +203,45 @@ lotes para poder generar "lote de cambios", "lote de frontera", etc.
   posición con `atributos.csv` (que usa `imagen` + índice de bbox). Si vais a permitir
   borrados, conviene que `--aplicar` escriba también un `mapa_indices.json` con la
   correspondencia vieja → nueva, y lo recalculo sin problema.
+
+
+---
+
+## 6. ACTUALIZACIÓN 3-11-2026 — las etiquetas están en español
+
+Después de la revisión desde el celular (gracias: 171 imágenes corregidas, 184 cambios
+de etiqueta, 4 cajas nuevas) se hizo un cierre técnico y un renombrado de clases.
+
+**Las cinco etiquetas cambiaron de nombre. Los índices YOLO 0-4 NO cambiaron.**
+
+| id | antes | ahora |
+|----|-------|-------|
+| 0 | `unripe` | `verde_inmadura` |
+| 1 | `early-pink` | `rosa_temprano` |
+| 2 | `commercial-basic` | `comercial_basico` |
+| 3 | `commercial-high` | `comercial_alto` |
+| 4 | `overripe` | `madurez_plena` |
+
+Lo que hay que tocar en `revisar_fresas.py` y en la página: **los nombres de clase
+cacheados en la UI** (las pastillas de colores del editor de cajas y la leyenda). Si la
+página sigue mandando `commercial-high`, `--aplicar` escribirá ese texto en el JSON y
+romperá la consistencia. Sugerencia: leer las clases de
+`dataset_5estados/yolo/classes.txt` en vez de tenerlas fijas en el código.
+
+El estado 4 se llama ahora **madurez plena**, no sobremadura: NY/T 2787-2015 y USDA
+reservan "sobremadura" para una condición del fruto (blando, apagado) que no se puede
+juzgar en una foto, mientras que la clase mide cobertura ≥ 90 %.
+
+### Otras cosas del cierre que conviene saber
+
+- Las cajas que se movieron o se crearon desde el celular tenían `attributes` vacíos;
+  ya están recalculados. Si vuelve a haber ediciones, basta con correr
+  `_work/cierre.py` en la PC: recalcula métricas, verifica JSON ↔ YOLO y reescribe
+  `informe/atributos.csv`.
+- Se recortaron 114 cajas que se salían del lienzo por menos de 1 px (defecto heredado
+  de la anotación original).
+- Estado final: 3 099 imágenes, **16 089 cajas** — verde_inmadura 10 670,
+  rosa_temprano 862, comercial_basico 998, comercial_alto 1 328, madurez_plena 2 231.
+  3 824 cajas marcadas `difficult`.
+- **`_work/apply.py` ya no debe ejecutarse**: reconstruiría el dataset desde
+  `data_anylabeling_2` y borraría las correcciones del celular.
