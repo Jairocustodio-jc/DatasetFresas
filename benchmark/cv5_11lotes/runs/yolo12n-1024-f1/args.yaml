@@ -1,7 +1,7 @@
 task: detect
 mode: train
 model: yolo12n.pt
-data: /tmp/cv_g1/sm2/f1/data.yaml
+data: /tmp/cv_g0/sm2/f1/data.yaml
 epochs: 100
 time: null
 patience: 20
