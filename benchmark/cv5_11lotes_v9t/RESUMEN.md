@@ -1,6 +1,6 @@
 # Benchmark YOLO · cv5_11lotes_v9t
 
-Actualizado 04/11/2026 09:17 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06, lote_07, lote_08, lote_09, lote_10, lote_11. 3077 fotos. GPU: Tesla T4, Tesla T4.
+Actualizado 04/11/2026 09:21 (hora de Kaggle, UTC). Lotes: lote_01, lote_02, lote_03, lote_04, lote_05, lote_06, lote_07, lote_08, lote_09, lote_10, lote_11. 3077 fotos. GPU: Tesla T4, Tesla T4.
 
 **Reparto estratificado por estado y por lote** (fotos y cajas de cada estado en cada parte):
 
@@ -19,7 +19,8 @@ En train, las fotos con cajas comerciales van repetidas (1064 copias extra) y la
 | 1 | yolov9t-1024-f3 | 73.6 % | 12.0 % | 0.745 | 0.863 | 0.78 | 0.86 | 0.7764 | 44 (mejor 24) | 92.8 | 2.11 | 8.4 | 13.74 |
 | 2 | yolov9t-1024-f2 | 72.9 % | 9.5 % | 0.748 | 0.863 | 0.79 | 0.84 | 0.7782 | 56 (mejor 36) | 118.0 | 2.11 | 8.4 | 13.81 |
 | 3 | yolov9t-1024-f4 | 72.5 % | 12.3 % | 0.749 | 0.862 | 0.79 | 0.84 | 0.7697 | 72 (mejor 52) | 153.5 | 2.11 | 8.4 | 13.35 |
-| 4 | yolov9t-1024-f1 | 68.6 % | 14.4 % | 0.755 | 0.870 | 0.77 | 0.86 | 0.7756 | 70 (mejor 50) | 147.8 | 2.11 | 8.4 | 13.32 |
+| 4 | yolov9t-1024-f5 | 69.3 % | 16.2 % | 0.750 | 0.867 | 0.81 | 0.84 | 0.7676 | 44 (mejor 24) | 92.8 | 2.11 | 8.4 | 14.91 |
+| 5 | yolov9t-1024-f1 | 68.6 % | 14.4 % | 0.755 | 0.870 | 0.77 | 0.86 | 0.7756 | 70 (mejor 50) | 147.8 | 2.11 | 8.4 | 13.32 |
 
 **AP50 por clase (test)**
 
@@ -28,6 +29,7 @@ En train, las fotos con cajas comerciales van repetidas (1064 copias extra) y la
 | yolov9t-1024-f3 | 0.98 | 0.90 | 0.64 | 0.83 | 0.95 |
 | yolov9t-1024-f2 | 0.98 | 0.92 | 0.60 | 0.84 | 0.97 |
 | yolov9t-1024-f4 | 0.98 | 0.90 | 0.63 | 0.83 | 0.96 |
+| yolov9t-1024-f5 | 0.98 | 0.91 | 0.63 | 0.85 | 0.97 |
 | yolov9t-1024-f1 | 0.98 | 0.93 | 0.64 | 0.84 | 0.96 |
 
 **A qué se predicen las cajas comerciales del test** (% de las cajas reales de cada clase)
@@ -40,6 +42,8 @@ En train, las fotos con cajas comerciales van repetidas (1064 copias extra) y la
 | yolov9t-1024-f2 | commercial-high | 198 | 81.3 | **0.0** | **8.6** | 9.6 | 0.0 | 0.5 |
 | yolov9t-1024-f4 | commercial-basic | 86 | 58.1 | **15.1** | **1.2** | 24.4 | 0.0 | 1.2 |
 | yolov9t-1024-f4 | commercial-high | 198 | 78.8 | **0.5** | **10.1** | 10.6 | 0.0 | 0.0 |
+| yolov9t-1024-f5 | commercial-basic | 86 | 58.1 | **17.4** | **1.2** | 23.3 | 0.0 | 0.0 |
+| yolov9t-1024-f5 | commercial-high | 198 | 74.2 | **0.5** | **14.6** | 10.1 | 0.0 | 0.5 |
 | yolov9t-1024-f1 | commercial-basic | 86 | 59.3 | **15.1** | **1.2** | 23.3 | 0.0 | 1.2 |
 | yolov9t-1024-f1 | commercial-high | 198 | 72.7 | **0.5** | **13.1** | 13.6 | 0.0 | 0.0 |
 
@@ -49,10 +53,6 @@ Conteo (monitoreo): sesgo = (comerciales contadas − reales) / reales en todo e
 
 | Modelo | Folds | mAP@0.5 | mAP@0.5:0.95 | Precisión | Recall | Especif. | Acierto com. | Error crít. | Sesgo conteo com. | R² conteo com. | mAP@0.5 (val del fold) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| yolov9t-1024 | 4 | 86.5 ± 0.4 | 74.9 ± 0.4 | 78.2 ± 1.0 | 85.0 ± 1.4 | 94.8 ± 0.4 | 71.9 ± 2.2 | 12.1 ± 2.0 | +19.9 ± 10.1 | 0.49 ± 0.09 | 89.7 ± 0.8 |
-
-**Sin resultado todavía**
-
-- yolov9t-1024-f5: entrenando
+| yolov9t-1024 | 5 | 86.5 ± 0.3 | 74.9 ± 0.4 | 78.7 ± 1.4 | 84.8 ± 1.2 | 94.7 ± 0.4 | 71.4 ± 2.3 | 12.9 ± 2.5 | +19.6 ± 8.8 | 0.48 ± 0.08 | 89.6 ± 0.7 |
 
 ⏱ = se detuvo por el tope de tiempo; se guarda su mejor época. Pesos: release `benchmark-cv5_11lotes_v9t` del repo. Mismas condiciones para todos: ver modelos/kaggle_benchmark.py.
