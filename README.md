@@ -58,3 +58,8 @@ $raiz = (Get-ChildItem "D:\*\DatasetId_360753_1652783343").FullName
 - **Barra y confirmación:** Enviar muestra una barra de progreso y el resultado (enviado, descargado o cancelado). Tocar la línea de estado del lote abre los 3 pasos: *Guardado en el celular → Enviado → Aplicado en la PC*. El tercero se marca ✓ cuando en la PC corres `--aplicar` y subes `revision/aplicados.json` con `git push`. En el índice aparece «✓ en PC» o «falta aplicar».
 
 Estados: `unripe` (0), `early-pink` (1), `commercial-basic` (2), `commercial-high` (3), `overripe` (4).
+
+## Para un agente que llega nuevo
+
+Lee [ARRANQUE_AGENTE.md](ARRANQUE_AGENTE.md): dónde está cada cosa, cómo trabaja Jairo
+y las trampas que ya han costado tiempo.
