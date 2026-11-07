@@ -1,0 +1,190 @@
+{
+  "version": "0.3.3",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "comercial_alto",
+      "points": [
+        [
+          401.000544,
+          314.999874
+        ],
+        [
+          566.000064,
+          513.000054
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 76.2,
+        "rojo_intenso_pct": 33.2,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 18.0,
+        "superficie_visible_pct": 98,
+        "oclusion_pct": 2,
+        "lado_px": 165,
+        "nitidez": 244.0
+      },
+      "difficult": false
+    },
+    {
+      "label": "verde_inmadura",
+      "points": [
+        [
+          294.999768,
+          191.99980799999997
+        ],
+        [
+          407.999592,
+          359.99964
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": true,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": true
+      },
+      "attributes": {
+        "color_pct": 0.0,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 0.0,
+        "superficie_visible_pct": 75,
+        "oclusion_pct": 25,
+        "lado_px": 113,
+        "nitidez": 667.0
+      },
+      "difficult": true
+    },
+    {
+      "label": "verde_inmadura",
+      "points": [
+        [
+          868.000392,
+          2.000376000000002
+        ],
+        [
+          913.000536,
+          45.000144
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 0.0,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 0.0,
+        "superficie_visible_pct": 100,
+        "oclusion_pct": 0,
+        "lado_px": 43,
+        "nitidez": 262.0
+      },
+      "difficult": false
+    },
+    {
+      "label": "verde_inmadura",
+      "points": [
+        [
+          504.000504,
+          235.99976399999997
+        ],
+        [
+          619.0002000000001,
+          342.00003599999997
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 0.0,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 0.0,
+        "superficie_visible_pct": 85,
+        "oclusion_pct": 15,
+        "lado_px": 106,
+        "nitidez": 601.0
+      },
+      "difficult": false
+    },
+    {
+      "label": "rosa_temprano",
+      "points": [
+        [
+          704.0003039999999,
+          216.99959399999997
+        ],
+        [
+          856.000656,
+          382.999806
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 20.9,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 78.9,
+        "superficie_visible_pct": 92,
+        "oclusion_pct": 8,
+        "lado_px": 152,
+        "nitidez": 418.0
+      },
+      "difficult": false
+    }
+  ],
+  "imagePath": "2372.png",
+  "imageData": null,
+  "imageHeight": 756,
+  "imageWidth": 1008
+}

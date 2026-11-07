@@ -1,0 +1,104 @@
+{
+  "version": "4.0.0-beta.7",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "comercial_basico",
+      "score": null,
+      "points": [
+        [
+          521.9993519999999,
+          364.999824
+        ],
+        [
+          657.99972,
+          364.999824
+        ],
+        [
+          657.99972,
+          543.999456
+        ],
+        [
+          521.9993519999999,
+          543.999456
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": true,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 61.3,
+        "rojo_intenso_pct": 41.5,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 18.4,
+        "superficie_visible_pct": 82,
+        "oclusion_pct": 18,
+        "lado_px": 136,
+        "nitidez": 551.0
+      },
+      "kie_linking": []
+    },
+    {
+      "label": "rosa_temprano",
+      "score": null,
+      "points": [
+        [
+          643.999608,
+          304.999884
+        ],
+        [
+          780.9999119999999,
+          304.999884
+        ],
+        [
+          780.9999119999999,
+          475.00009200000005
+        ],
+        [
+          643.999608,
+          475.00009200000005
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": true,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 44.0,
+        "rojo_intenso_pct": 7.4,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 38.4,
+        "superficie_visible_pct": 82,
+        "oclusion_pct": 19,
+        "lado_px": 137,
+        "nitidez": 489.0
+      },
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "87.png",
+  "imageData": null,
+  "imageHeight": 756,
+  "imageWidth": 1008,
+  "description": ""
+}

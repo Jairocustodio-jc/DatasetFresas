@@ -1,0 +1,104 @@
+{
+  "version": "4.0.0-beta.7",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "comercial_alto",
+      "score": null,
+      "points": [
+        [
+          578.0003039999999,
+          293.00027400000005
+        ],
+        [
+          770.0001120000001,
+          293.00027400000005
+        ],
+        [
+          770.0001120000001,
+          550.000206
+        ],
+        [
+          578.0003039999999,
+          550.000206
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 85.6,
+        "rojo_intenso_pct": 69.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 8.8,
+        "superficie_visible_pct": 100,
+        "oclusion_pct": 0,
+        "lado_px": 192,
+        "nitidez": 515.0
+      },
+      "kie_linking": []
+    },
+    {
+      "label": "verde_inmadura",
+      "score": null,
+      "points": [
+        [
+          801.0001440000001,
+          253.00031399999997
+        ],
+        [
+          863.000208,
+          253.00031399999997
+        ],
+        [
+          863.000208,
+          308.00007
+        ],
+        [
+          801.0001440000001,
+          308.00007
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 0.0,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 0.0,
+        "superficie_visible_pct": 84,
+        "oclusion_pct": 16,
+        "lado_px": 55,
+        "nitidez": 312.0
+      },
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "140.png",
+  "imageData": null,
+  "imageHeight": 756,
+  "imageWidth": 1008,
+  "description": ""
+}

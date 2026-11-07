@@ -1,0 +1,118 @@
+{
+  "version": "0.3.3",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "comercial_alto",
+      "points": [
+        [
+          186.999624,
+          388.99979999999994
+        ],
+        [
+          330.99948,
+          588.9996
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 81.8,
+        "rojo_intenso_pct": 55.9,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 13.6,
+        "superficie_visible_pct": 100,
+        "oclusion_pct": 0,
+        "lado_px": 144,
+        "nitidez": 188.0
+      },
+      "difficult": false
+    },
+    {
+      "label": "madurez_plena",
+      "points": [
+        [
+          639.999864,
+          137.000052
+        ],
+        [
+          725.9994,
+          232.999956
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": false,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 97.9,
+        "rojo_intenso_pct": 70.5,
+        "rojo_granate_pct": 27.7,
+        "color_palido_pct": 6.9,
+        "superficie_visible_pct": 86,
+        "oclusion_pct": 14,
+        "lado_px": 86,
+        "nitidez": 597.0
+      },
+      "difficult": false
+    },
+    {
+      "label": "verde_inmadura",
+      "points": [
+        [
+          675.000144,
+          278.0001
+        ],
+        [
+          797.0004,
+          424.999764
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {
+        "ocluido": false,
+        "borroso": false,
+        "reflejo_fuerte": true,
+        "fruto_vecino_en_caja": false,
+        "muy_pequeno": false,
+        "dano": false,
+        "dificil": false
+      },
+      "attributes": {
+        "color_pct": 0.0,
+        "rojo_intenso_pct": 0.0,
+        "rojo_granate_pct": 0.0,
+        "color_palido_pct": 0.0,
+        "superficie_visible_pct": 65,
+        "oclusion_pct": 35,
+        "lado_px": 122,
+        "nitidez": 239.0
+      },
+      "difficult": false
+    }
+  ],
+  "imagePath": "351.png",
+  "imageData": null,
+  "imageHeight": 756,
+  "imageWidth": 1008
+}
